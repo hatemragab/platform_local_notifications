@@ -34,7 +34,7 @@ class ShowPluginNotificationModel {
     this.androidNotificationDetails,
     this.iosDetails,
     this.linux,
-    this.macOsDetails ,
+    this.macOsDetails,
     this.payload,
   });
 }
@@ -55,7 +55,7 @@ class PluginNotificationClickAction extends BasePluginNotificationAction {
 class PluginNotificationReplyAction extends BasePluginNotificationAction {
   final String text;
   final String? payload;
-  PluginNotificationReplyAction(this.text,this.payload);
+  PluginNotificationReplyAction(this.text, this.payload);
 
   @override
   String toString() {
@@ -64,7 +64,6 @@ class PluginNotificationReplyAction extends BasePluginNotificationAction {
 }
 
 class PluginNotificationMarkRead extends BasePluginNotificationAction {
-
   @override
   String toString() {
     return 'PluginNotificationMarkRead{}';

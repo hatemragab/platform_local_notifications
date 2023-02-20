@@ -22,7 +22,7 @@ class _HomeState extends State<Home> {
       appBar: AppBar(),
       floatingActionButton: FloatingActionButton(
         onPressed: onPush,
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [
@@ -40,7 +40,7 @@ class _HomeState extends State<Home> {
                 userName: "userName",
               );
             },
-            child: Text("Chat notification"),
+            child: const Text("Chat notification"),
           )
         ],
       ),
@@ -58,9 +58,11 @@ class _HomeState extends State<Home> {
   }
 
   void _setUpStreams() {
-    PlatformNotifier.I.platformNotifierStream.listen((event) {
-      print(event.toString());
-    },);
+    PlatformNotifier.I.platformNotifierStream.listen(
+      (event) {
+        print(event.toString());
+      },
+    );
   }
 
   void _init() async {

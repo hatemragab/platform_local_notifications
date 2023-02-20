@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:local_notifier/local_notifier.dart';
-import 'package:overlay_support/overlay_support.dart';
 import '../platform_local_notifications.dart';
 
 const _portName = "v_action_receiver_port";
@@ -88,7 +87,6 @@ class PlatformNotifier {
       _portName,
     );
     _port.listen((var data) async {
-      print(" ");
       final isInput = data[0] as bool;
       final payload = data[1] as String?;
 
@@ -139,9 +137,9 @@ class PlatformNotifier {
     try {
       file = await DefaultCacheManager().getSingleFile(userImage);
     } catch (err) {
-      print(err);
-
-      ///
+      if (kDebugMode) {
+        print(err);
+      }
     }
 
     final messagingStyleInformation = MessagingStyleInformation(

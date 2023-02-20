@@ -21,9 +21,8 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
         ),
         darkTheme: ThemeData.dark(),
-        home: const Home( ),
+        home: const Home(),
       ),
     );
   }
 }
-
