@@ -93,9 +93,9 @@ class PlatformNotifier {
       if (isInput) {
         final text = data[2] as String;
         _platformNotifierStream.sink
-            .add(PluginNotificationReplyAction(text, payload));
+            .add(PluginNotificationReplyAction(text: text,payload:  payload));
       } else {
-        _platformNotifierStream.sink.add(PluginNotificationMarkRead());
+        _platformNotifierStream.sink.add(PluginNotificationMarkRead(payload));
       }
     });
   }
@@ -340,7 +340,7 @@ Future<void> onDidReceiveBackgroundNotificationResponse(
   if (event.actionId == "1") {
     final SendPort? send = IsolateNameServer.lookupPortByName(_portName);
     send!.send([false, event.payload]);
-    _platformNotifierStream.sink.add(PluginNotificationMarkRead());
+    _platformNotifierStream.sink.add(PluginNotificationMarkRead( event.payload));
   }
   if (event.actionId == "2") {
     final payload = event.payload.toString();
@@ -349,7 +349,7 @@ Future<void> onDidReceiveBackgroundNotificationResponse(
     send!.send([false, event.payload]);
     send.send([true, payload, text]);
     _platformNotifierStream.sink
-        .add(PluginNotificationReplyAction(text, payload));
-    _platformNotifierStream.sink.add(PluginNotificationMarkRead());
+        .add(PluginNotificationReplyAction(text: text,payload:  payload));
+    _platformNotifierStream.sink.add(PluginNotificationMarkRead(payload));
   }
 }

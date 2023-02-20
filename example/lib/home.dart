@@ -35,7 +35,8 @@ class _HomeState extends State<Home> {
                   body: "body",
                   payload: "test",
                 ),
-                userImage: "",
+                userImage:
+                    "https://thumbs.dreamstime.com/b/default-avatar-profile-vector-user-profile-default-avatar-profile-vector-user-profile-profile-179376714.jpg",
                 conversationTitle: "conversationTitle",
                 userName: "userName",
               );
@@ -50,10 +51,17 @@ class _HomeState extends State<Home> {
   void onPush() async {
     await PlatformNotifier.I.showPluginNotification(
       ShowPluginNotificationModel(
-          id: DateTime.now().second,
-          title: "title",
-          body: "body",
-          payload: "test"),
+        id: DateTime.now().second,
+        title: "title",
+        body: "body",
+        payload: "test",
+        macOsDetails: const DarwinNotificationDetails(
+          presentSound: true,
+          presentAlert: true,
+          presentBadge: true,
+          badgeNumber: 1
+        ),
+      ),
     );
   }
 

@@ -39,12 +39,14 @@ class ShowPluginNotificationModel {
   });
 }
 
-abstract class BasePluginNotificationAction {}
-
-class PluginNotificationClickAction extends BasePluginNotificationAction {
+abstract class BasePluginNotificationAction {
   final String? payload;
 
-  PluginNotificationClickAction(this.payload);
+  BasePluginNotificationAction(this.payload);
+}
+
+class PluginNotificationClickAction extends BasePluginNotificationAction {
+  PluginNotificationClickAction(String? payload) : super(payload);
 
   @override
   String toString() {
@@ -54,8 +56,9 @@ class PluginNotificationClickAction extends BasePluginNotificationAction {
 
 class PluginNotificationReplyAction extends BasePluginNotificationAction {
   final String text;
-  final String? payload;
-  PluginNotificationReplyAction(this.text, this.payload);
+
+  PluginNotificationReplyAction({required String? payload,required this.text}) : super(payload);
+
 
   @override
   String toString() {
@@ -64,6 +67,8 @@ class PluginNotificationReplyAction extends BasePluginNotificationAction {
 }
 
 class PluginNotificationMarkRead extends BasePluginNotificationAction {
+  PluginNotificationMarkRead(String? payload) : super(payload);
+
   @override
   String toString() {
     return 'PluginNotificationMarkRead{}';
