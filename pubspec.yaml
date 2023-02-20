@@ -1,0 +1,24 @@
+name: platform_local_notifications
+description: platform local notifications support all platform for local notify
+version: 0.0.1
+homepage:
+
+environment:
+  sdk: '>=2.12.0 <3.0.0'
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_local_notifications: ^13.0.0
+  local_notifier: ^0.1.5
+  overlay_support: ^2.1.0
+  flutter_cache_manager: ^3.3.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.1
+
+flutter:
