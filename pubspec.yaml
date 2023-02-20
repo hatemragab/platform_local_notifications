@@ -1,7 +1,9 @@
 name: platform_local_notifications
 description: platform local notifications support all platform for local notify
 version: 0.0.1
-homepage:
+homepage: https://github.com/hatemragab/platform_local_notifications
+issue_tracker: https://github.com/hatemragab/platform_local_notifications/issues
+repository: https://github.com/hatemragab/platform_local_notifications
 
 environment:
   sdk: '>=2.12.0 <3.0.0'
@@ -22,3 +24,10 @@ dev_dependencies:
   flutter_lints: ^2.0.1
 
 flutter:
+platforms:
+  android:
+  ios:
+  web:
+  windows:
+  macos:
+  linux:
