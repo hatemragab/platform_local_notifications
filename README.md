@@ -53,3 +53,22 @@
                 userName: "userName",
               );
 ```
+## Listen for chick and actions stream
+```dart
+  void _setUpStreams() {
+    PlatformNotifier.I.platformNotifierStream.listen(
+      (event) {
+        if (event is PluginNotificationClickAction) {
+          //handle when user click on the notification
+        }
+        if (event is PluginNotificationReplyAction) {
+          //handle when user choose reply action
+        }
+        if (event is PluginNotificationMarkRead) {
+          //handle when user submit value to reply textile
+        }
+      },
+    );
+  }
+
+```

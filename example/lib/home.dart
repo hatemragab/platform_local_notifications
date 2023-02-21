@@ -56,11 +56,10 @@ class _HomeState extends State<Home> {
         body: "body",
         payload: "test",
         macOsDetails: const DarwinNotificationDetails(
-          presentSound: true,
-          presentAlert: true,
-          presentBadge: true,
-          badgeNumber: 1
-        ),
+            presentSound: true,
+            presentAlert: true,
+            presentBadge: true,
+            badgeNumber: 1),
       ),
     );
   }
@@ -68,7 +67,15 @@ class _HomeState extends State<Home> {
   void _setUpStreams() {
     PlatformNotifier.I.platformNotifierStream.listen(
       (event) {
-        print(event.toString());
+        if (event is PluginNotificationClickAction) {
+          //handle when user click on the notification
+        }
+        if (event is PluginNotificationReplyAction) {
+          //handle when user choose reply action
+        }
+        if (event is PluginNotificationMarkRead) {
+          //handle when user submit value to reply textile
+        }
       },
     );
   }
