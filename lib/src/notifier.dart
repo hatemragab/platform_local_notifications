@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:local_notifier/local_notifier.dart';
+
 import '../platform_local_notifications.dart';
 
 const _portName = "v_action_receiver_port";
@@ -63,10 +65,12 @@ class PlatformNotifier {
 
   Future<void> _initForMobile() async {
     try {
-      await flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(data.androidNotificationChannel);
+      if (Platform.isAndroid) {
+        await flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>()
+            ?.createNotificationChannel(data.androidNotificationChannel);
+      }
     } catch (err) {
       //
     }
@@ -93,7 +97,7 @@ class PlatformNotifier {
       if (isInput) {
         final text = data[2] as String;
         _platformNotifierStream.sink
-            .add(PluginNotificationReplyAction(text: text,payload:  payload));
+            .add(PluginNotificationReplyAction(text: text, payload: payload));
       } else {
         _platformNotifierStream.sink.add(PluginNotificationMarkRead(payload));
       }
@@ -311,6 +315,7 @@ class PlatformNotifier {
           ?.requestPermissions(
             alert: true,
             badge: true,
+            critical: true,
             sound: true,
           );
     } else if (Platform.isAndroid) {
@@ -325,6 +330,7 @@ class PlatformNotifier {
               MacOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(
             alert: true,
+            critical: true,
             badge: true,
             sound: true,
           );
@@ -340,7 +346,7 @@ Future<void> onDidReceiveBackgroundNotificationResponse(
   if (event.actionId == "1") {
     final SendPort? send = IsolateNameServer.lookupPortByName(_portName);
     send!.send([false, event.payload]);
-    _platformNotifierStream.sink.add(PluginNotificationMarkRead( event.payload));
+    _platformNotifierStream.sink.add(PluginNotificationMarkRead(event.payload));
   }
   if (event.actionId == "2") {
     final payload = event.payload.toString();
@@ -349,7 +355,7 @@ Future<void> onDidReceiveBackgroundNotificationResponse(
     send!.send([false, event.payload]);
     send.send([true, payload, text]);
     _platformNotifierStream.sink
-        .add(PluginNotificationReplyAction(text: text,payload:  payload));
+        .add(PluginNotificationReplyAction(text: text, payload: payload));
     _platformNotifierStream.sink.add(PluginNotificationMarkRead(payload));
   }
 }

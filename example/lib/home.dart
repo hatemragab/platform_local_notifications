@@ -42,7 +42,14 @@ class _HomeState extends State<Home> {
               );
             },
             child: const Text("Chat notification"),
-          )
+          ),
+          TextButton(
+            onPressed: () async {
+              bool? isAccepted = await PlatformNotifier.I.requestPermissions();
+              print("isAccepted $isAccepted");
+            },
+            child: const Text("ask for permissions"),
+          ),
         ],
       ),
     );
@@ -82,7 +89,5 @@ class _HomeState extends State<Home> {
 
   void _init() async {
     await PlatformNotifier.I.init(appName: "test app name");
-    bool? isAccepted = await PlatformNotifier.I.requestPermissions();
-    print("isAccepted $isAccepted");
   }
 }

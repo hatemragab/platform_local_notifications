@@ -13,7 +13,12 @@ class NotifierData {
     ),
     this.initializationSettingsAndroid =
         const AndroidInitializationSettings('@mipmap/ic_launcher'),
-    this.initializationSettingsDarwom = const DarwinInitializationSettings(),
+    this.initializationSettingsDarwom = const DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+      requestCriticalPermission: false,
+    ),
   });
 }
 
@@ -57,8 +62,8 @@ class PluginNotificationClickAction extends BasePluginNotificationAction {
 class PluginNotificationReplyAction extends BasePluginNotificationAction {
   final String text;
 
-  PluginNotificationReplyAction({required String? payload,required this.text}) : super(payload);
-
+  PluginNotificationReplyAction({required String? payload, required this.text})
+      : super(payload);
 
   @override
   String toString() {
