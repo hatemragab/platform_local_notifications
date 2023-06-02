@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
 
+import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -130,12 +131,13 @@ class PlatformNotifier {
     ///user name in the icon person!
     required String userName,
     List<Message>? messages,
+    required BuildContext context,
 
     ///for group chat
     required String? conversationTitle,
   }) async {
     if (isWeb || isDesktop) {
-      return showPluginNotification(model);
+      return showPluginNotification(model, context);
     }
     File? file;
     try {
@@ -175,7 +177,7 @@ class PlatformNotifier {
       reply: reply,
       yourMessage: yourMessage,
     );
-    return showPluginNotification(model);
+    return showPluginNotification(model, context);
   }
 
   AndroidNotificationDetails get _highAndroidNotificationDetails =>
@@ -230,12 +232,17 @@ class PlatformNotifier {
 
   Future<void> showPluginNotification(
     ShowPluginNotificationModel model,
+    BuildContext context,
   ) async {
     model.androidNotificationDetails ??= _highAndroidNotificationDetails;
     model.iosDetails ??= _highDarwinNotificationDetails;
 
     if (isWeb) {
-      return _showOverlaySupport(title: model.title, subtitle: model.body);
+      return _showOverlaySupport(
+        title: model.title,
+        subtitle: model.body,
+        context: context,
+      );
     }
 
     if (isMobile || Platform.isMacOS || Platform.isLinux) {
@@ -281,17 +288,33 @@ class PlatformNotifier {
     Duration duration = const Duration(seconds: 5),
     String? subtitle,
     required String title,
-    TextStyle? textStyle,
-    Color? background,
+    required BuildContext context,
   }) {
-    showSimpleNotification(
-      Text(title, style: textStyle),
-      background: background,
-      autoDismiss: true,
-      slideDismissDirection: DismissDirection.horizontal,
-      subtitle: subtitle == null ? null : Text(subtitle),
+    Flushbar(
+      message: subtitle,
+      icon: Icon(
+        Icons.message,
+        size: 28.0,
+        color: Colors.blue[300],
+      ),
+      title: title,
+      margin: const EdgeInsets.all(6.0),
+      flushbarStyle: FlushbarStyle.FLOATING,
+      flushbarPosition: FlushbarPosition.TOP,
+      textDirection: Directionality.of(context),
+      borderRadius: BorderRadius.circular(12),
       duration: duration,
-    );
+      leftBarIndicatorColor: Colors.blue[300],
+      // backgroundColor: background,
+    ).show(context);
+    // showSimpleNotification(
+    //   Text(title, style: textStyle),
+    //   background: background,
+    //   autoDismiss: true,
+    //   slideDismissDirection: DismissDirection.horizontal,
+    //   subtitle: subtitle == null ? null : Text(subtitle),
+    //   duration: duration,
+    // );
   }
 
   @pragma('vm:entry-point')

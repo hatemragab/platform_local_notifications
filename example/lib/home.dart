@@ -21,7 +21,7 @@ class _HomeState extends State<Home> {
     return Scaffold(
       appBar: AppBar(),
       floatingActionButton: FloatingActionButton(
-        onPressed: onPush,
+        onPressed: () => onPush(context),
         child: const Icon(Icons.add),
       ),
       body: Column(
@@ -35,6 +35,7 @@ class _HomeState extends State<Home> {
                   body: "body",
                   payload: "test",
                 ),
+                context: context,
                 userImage:
                     "https://thumbs.dreamstime.com/b/default-avatar-profile-vector-user-profile-default-avatar-profile-vector-user-profile-profile-179376714.jpg",
                 conversationTitle: "conversationTitle",
@@ -55,20 +56,21 @@ class _HomeState extends State<Home> {
     );
   }
 
-  void onPush() async {
+  void onPush(BuildContext context) async {
     await PlatformNotifier.I.showPluginNotification(
-      ShowPluginNotificationModel(
-        id: DateTime.now().second,
-        title: "title",
-        body: "body",
-        payload: "test",
-        macOsDetails: const DarwinNotificationDetails(
+        ShowPluginNotificationModel(
+          id: DateTime.now().second,
+          title: "title",
+          body: "body",
+          payload: "test",
+          macOsDetails: const DarwinNotificationDetails(
             presentSound: true,
             presentAlert: true,
             presentBadge: true,
-            badgeNumber: 1),
-      ),
-    );
+            badgeNumber: 1,
+          ),
+        ),
+        context);
   }
 
   void _setUpStreams() {
