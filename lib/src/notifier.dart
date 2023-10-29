@@ -346,7 +346,7 @@ class PlatformNotifier {
           flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
 
-      return await androidImplementation?.requestPermission();
+      return await androidImplementation?.requestNotificationsPermission();
     } else if (Platform.isMacOS) {
       return await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
