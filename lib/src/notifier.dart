@@ -287,6 +287,7 @@ class PlatformNotifier {
       title:title,
       content: subtitle,
     );
+
     // Flushbar(
     //   message: subtitle,
     //   icon: Icon(
