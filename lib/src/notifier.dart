@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:local_notifier/local_notifier.dart';
+import 'package:quick_notify/quick_notify.dart';
 
 import '../platform_local_notifications.dart';
 
@@ -264,18 +265,10 @@ class PlatformNotifier {
         payload: model.payload,
       );
     } else if (Platform.isWindows) {
-      final notification = LocalNotification(
-        title: appName,
-        subtitle: model.title,
-        identifier: model.payload,
-        body: model.body,
+      QuickNotify.notify(
+        title: model.title,
+        content: model.body,
       );
-      await localNotifier.notify(notification);
-      //  await notification.show();
-      notification.onClick = () {
-        _platformNotifierStream.sink
-            .add(PluginNotificationClickAction(notification.identifier));
-      };
     }
   }
 
@@ -286,27 +279,31 @@ class PlatformNotifier {
 
   void _showOverlaySupport({
     Duration duration = const Duration(seconds: 5),
-    String? subtitle,
+    required String  subtitle,
     required String title,
     required BuildContext context,
   }) {
-    Flushbar(
-      message: subtitle,
-      icon: Icon(
-        Icons.message,
-        size: 28.0,
-        color: Colors.blue[300],
-      ),
-      title: title,
-      margin: const EdgeInsets.all(6.0),
-      flushbarStyle: FlushbarStyle.FLOATING,
-      flushbarPosition: FlushbarPosition.TOP,
-      textDirection: Directionality.of(context),
-      borderRadius: BorderRadius.circular(12),
-      duration: duration,
-      leftBarIndicatorColor: Colors.blue[300],
-      // backgroundColor: background,
-    ).show(context);
+    QuickNotify.notify(
+      title:title,
+      content: subtitle,
+    );
+    // Flushbar(
+    //   message: subtitle,
+    //   icon: Icon(
+    //     Icons.message,
+    //     size: 28.0,
+    //     color: Colors.blue[300],
+    //   ),
+    //   title: title,
+    //   margin: const EdgeInsets.all(6.0),
+    //   flushbarStyle: FlushbarStyle.FLOATING,
+    //   flushbarPosition: FlushbarPosition.TOP,
+    //   textDirection: Directionality.of(context),
+    //   borderRadius: BorderRadius.circular(12),
+    //   duration: duration,
+    //   leftBarIndicatorColor: Colors.blue[300],
+    //   // backgroundColor: background,
+    // ).show(context);
     // showSimpleNotification(
     //   Text(title, style: textStyle),
     //   background: background,
@@ -330,7 +327,10 @@ class PlatformNotifier {
   }
 
   Future<bool?> requestPermissions() async {
-    if (kIsWeb) return false;
+    if (kIsWeb ||Platform.isWindows   ) {
+      return QuickNotify.requestPermission();
+
+    }
     if (Platform.isIOS) {
       return await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -341,13 +341,15 @@ class PlatformNotifier {
             critical: true,
             sound: true,
           );
-    } else if (Platform.isAndroid) {
+    }
+    if (Platform.isAndroid) {
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
 
       return await androidImplementation?.requestNotificationsPermission();
-    } else if (Platform.isMacOS) {
+    }
+    if (Platform.isMacOS) {
       return await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
               MacOSFlutterLocalNotificationsPlugin>()
@@ -358,6 +360,7 @@ class PlatformNotifier {
             sound: true,
           );
     }
+
     return false;
   }
 }

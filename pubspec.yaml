@@ -15,7 +15,9 @@ dependencies:
   flutter_local_notifications: ^16.1.0
   local_notifier: ^0.1.5
   flutter_cache_manager: ^3.3.1
-  another_flushbar: ^1.12.30
+  quick_notify:
+    path: ./quick_notify
+  another_flushbar: ^1.12.31-dev.1
 
 
 dev_dependencies:
