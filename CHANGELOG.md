@@ -1,3 +1,5 @@
+## 1.0.0
+- stable release all platforms supported now!
 ## 0.1.0
 
 update packages

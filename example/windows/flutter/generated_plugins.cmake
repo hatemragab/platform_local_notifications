@@ -4,7 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   local_notifier
-  quick_notify
+  quick_notify_2
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

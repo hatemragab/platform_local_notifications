@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:local_notifier/local_notifier.dart';
-import 'package:quick_notify/quick_notify.dart';
+import 'package:quick_notify_2/quick_notify.dart';
 
 import '../platform_local_notifications.dart';
 
@@ -277,7 +277,6 @@ class PlatformNotifier {
   }
 
   void _showOverlaySupport({
-    Duration duration = const Duration(seconds: 5),
     required String subtitle,
     required String title,
     required BuildContext context,
