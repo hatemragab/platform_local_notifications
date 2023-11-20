@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
-
-import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -264,8 +262,9 @@ class PlatformNotifier {
         ),
         payload: model.payload,
       );
-    } else if (Platform.isWindows) {
-      QuickNotify.notify(
+    }
+    if (Platform.isWindows) {
+      await QuickNotify.notify(
         title: model.title,
         content: model.body,
       );
@@ -279,15 +278,14 @@ class PlatformNotifier {
 
   void _showOverlaySupport({
     Duration duration = const Duration(seconds: 5),
-    required String  subtitle,
+    required String subtitle,
     required String title,
     required BuildContext context,
   }) {
     QuickNotify.notify(
-      title:title,
+      title: title,
       content: subtitle,
     );
-
 
     // Flushbar(
     //   message: subtitle,
@@ -329,9 +327,8 @@ class PlatformNotifier {
   }
 
   Future<bool?> requestPermissions() async {
-    if (kIsWeb ||Platform.isWindows   ) {
+    if (kIsWeb || Platform.isWindows) {
       return QuickNotify.requestPermission();
-
     }
     if (Platform.isIOS) {
       return await flutterLocalNotificationsPlugin

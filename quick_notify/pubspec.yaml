@@ -1,12 +1,12 @@
 name: quick_notify
 description: A cross-platform (Android/iOS/Web/Windows/macOS/Linux) notification plugin for Flutter.
-version: 0.2.1
-homepage: https://github.com/woodemi
-repository: https://github.com/woodemi/quick_notify
+version: 0.3.0-dev.0
+homepage: https://github.com/woodemi/quick.flutter
+repository: https://github.com/woodemi/quick.flutter/tree/master/packages/quick_notify
 
 environment:
-  sdk: ">=2.12.0 <3.0.0"
-  flutter: ">=2.0.0"
+  sdk: ">=2.15.1 <3.0.0"
+  flutter: ">=2.5.0"
 
 dependencies:
   flutter:
@@ -14,10 +14,12 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
   plugin_platform_interface: ^2.1.2
+  desktop_notifications: ^0.6.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^1.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -30,11 +32,20 @@ flutter:
   # adding or updating assets for this project.
   plugin:
     platforms:
+    # This plugin project was generated without specifying any
+    # platforms with the `--platform` argument. If you see the `some_platform` map below, remove it and
+    # then add platforms following the instruction here:
+    # https://flutter.dev/docs/development/packages-and-plugins/developing-packages#plugin-platforms
+    # -------------------
+
       windows:
         pluginClass: QuickNotifyPlugin
+      linux:
+        dartPluginClass: QuickNotifyLinux
       web:
         pluginClass: QuickNotifyWeb
         fileName: src/quick_notify_web.dart
+    # -------------------
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

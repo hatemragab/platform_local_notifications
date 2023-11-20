@@ -21,18 +21,17 @@ class _MyAppState extends State<MyApp> {
         ),
         body: Column(
           children: [
-            SizedBox(height: 40,),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                TextButton(
+                ElevatedButton(
                   child: Text('hasPermission'),
                   onPressed: () async {
                     var hasPermission = await QuickNotify.hasPermission();
                     print('hasPermission $hasPermission');
                   },
                 ),
-                TextButton(
+                ElevatedButton(
                   child: Text('requestPermission'),
                   onPressed: () async {
                     var requestPermission = await QuickNotify.requestPermission();
@@ -41,7 +40,7 @@ class _MyAppState extends State<MyApp> {
                 ),
               ],
             ),
-            TextButton(
+            ElevatedButton(
               child: Text('notify'),
               onPressed: () {
                 QuickNotify.notify(

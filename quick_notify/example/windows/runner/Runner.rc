@@ -93,7 +93,7 @@ BEGIN
             VALUE "FileDescription", "Demonstrates how to use the quick_notify plugin." "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "quick_notify_example" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2021 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2022 com.example. All rights reserved." "\0"
             VALUE "OriginalFilename", "quick_notify_example.exe" "\0"
             VALUE "ProductName", "quick_notify_example" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

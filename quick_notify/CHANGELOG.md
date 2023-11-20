@@ -1,3 +1,11 @@
+## 0.3.0-dev.0
+
+- Move to `quick.flutter` mono repo
+- Refactor Linux implementation to `desktop_notifications`
+- Fetch nuget when unavailable on Windows
+- Refactor notify to asynchronous
+- Fix permission when authorizationStatus is notDetermined
+
 ## 0.2.1
 
 - Add `title` to `notify` method

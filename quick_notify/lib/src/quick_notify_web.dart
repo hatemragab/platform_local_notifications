@@ -3,9 +3,9 @@ import 'dart:html';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:quick_notify/src/quick_notify_platform_interface.dart';
 
-const _PermissionGranted = 'granted';
-const _PermissionDenied = 'denied';
-const _PermissionDefault = 'default';
+// const _permissionDefault = 'default';
+// const _permissionDenied = 'denied';
+const _permissionGranted = 'granted';
 
 class QuickNotifyWeb extends QuickNotifyPlatform {
   static void registerWith(Registrar registrar) {
@@ -14,20 +14,20 @@ class QuickNotifyWeb extends QuickNotifyPlatform {
 
   @override
   Future<bool> hasPermission() async {
-    return Notification.permission == _PermissionGranted;
+    return Notification.permission == _permissionGranted;
   }
 
   @override
   Future<bool> requestPermission() async {
     var result = await Notification.requestPermission();
-    return result == _PermissionGranted;
+    return result == _permissionGranted;
   }
 
   @override
-  void notify({
+  Future<void> notify({
     required String title,
     String? content,
-  }) {
+  }) async {
     Notification(title, body: content);
   }
 }

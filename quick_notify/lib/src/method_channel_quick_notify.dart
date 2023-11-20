@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import 'quick_notify_platform_interface.dart';
 
-const MethodChannel _channel = const MethodChannel('quick_notify');
+const MethodChannel _channel = MethodChannel('quick_notify');
 
 class MethodChannelQuickNotify extends QuickNotifyPlatform {
   @override
@@ -11,7 +11,6 @@ class MethodChannelQuickNotify extends QuickNotifyPlatform {
     return result;
   }
 
-
   @override
   Future<bool> requestPermission() async {
     bool result = await _channel.invokeMethod('requestPermission');
@@ -19,11 +18,11 @@ class MethodChannelQuickNotify extends QuickNotifyPlatform {
   }
 
   @override
-  void notify({
+  Future<void> notify({
     required String title,
     String? content,
-  }) {
-    _channel.invokeMethod('notify', {
+  }) async {
+    await _channel.invokeMethod('notify', {
       'title': title,
       'content': content,
     });

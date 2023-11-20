@@ -17,8 +17,6 @@ dependencies:
   flutter_cache_manager: ^3.3.1
   quick_notify:
     path: ./quick_notify
-  another_flushbar: ^1.12.31-dev.1
-
 
 dev_dependencies:
   flutter_test:
