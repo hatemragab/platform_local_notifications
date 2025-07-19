@@ -130,7 +130,7 @@ class PlatformNotifier {
     ///user name in the icon person!
     required String userName,
     List<Message>? messages,
-    required BuildContext context,
+    BuildContext? context,
 
     ///for group chat
     required String? conversationTitle,
@@ -231,12 +231,12 @@ class PlatformNotifier {
 
   Future<void> showPluginNotification(
     ShowPluginNotificationModel model,
-    BuildContext context,
+    BuildContext? context,
   ) async {
     model.androidNotificationDetails ??= _highAndroidNotificationDetails;
     model.iosDetails ??= _highDarwinNotificationDetails;
 
-    if (isWeb) {
+    if (isWeb && context != null) {
       return _showOverlaySupport(
         title: model.title,
         subtitle: model.body,

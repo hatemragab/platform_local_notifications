@@ -1,3 +1,6 @@
+## 1.0.4
+- make the context optional
+
 ## 1.0.3
 - upgrade packages version
 
