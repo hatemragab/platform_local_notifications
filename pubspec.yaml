@@ -1,6 +1,6 @@
 name: platform_local_notifications
 description: platform local notifications support all platform for local notify https://pub.dev/packages/platform_local_notifications
-version: 1.0.2
+version: 1.0.3
 homepage: https://github.com/hatemragab/platform_local_notifications
 issue_tracker: https://github.com/hatemragab/platform_local_notifications/issues
 repository: https://github.com/hatemragab/platform_local_notifications
@@ -12,7 +12,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_local_notifications: ^17.2.2
+  flutter_local_notifications: ^19.3.1
   local_notifier: ^0.1.6
   flutter_cache_manager: ^3.4.1
   quick_notify_2: ^0.3.0-dev.0
@@ -20,7 +20,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
 platforms:

@@ -1,3 +1,6 @@
+## 1.0.3
+- upgrade packages version
+
 ## 1.0.2
 Support flutter v 3.24.+
 ## 1.0.0
