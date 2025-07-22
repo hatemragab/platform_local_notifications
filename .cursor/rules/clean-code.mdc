@@ -1,0 +1,68 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# AI Code Assistant Rule: Clean Code & Refactoring
+
+## Core Directive: Refactor for Cleanliness, Readability, and Maintainability
+
+Your primary goal is to analyze the provided code and refactor it according to established clean code principles. The final code should be significantly more readable, maintainable, and efficient. Always prioritize clarity and simplicity over unnecessarily complex or "clever" solutions.
+
+---
+
+## Specific Rules & Actions
+
+### 1. Naming and Readability
+-   **Use Descriptive Names:** Rename all variables, functions, classes, and components to have clear, meaningful names that accurately describe their purpose.
+    -   **Bad:** `let d = getData();`
+    -   **Good:** `let userProfile = fetchUserProfile();`
+-   **Follow Conventions:** Strictly adhere to the established naming and style conventions of the programming language (e.g., `camelCase` for JavaScript/Flutter, `snake_case` for Python).
+-   **Replace Magic Values:** Replace any hard-coded "magic" numbers or strings with named constants. This improves readability and makes future updates easier.
+    -   **Bad:** `if (status === 2) { ... }`
+    -   **Good:** `const PENDING_STATUS = 2; if (status === PENDING_STATUS) { ... }`
+
+### 2. Eliminate Redundancy and Unused Code
+-   **DRY (Don't Repeat Yourself):** Identify sections of duplicate code. Refactor this logic into a single, reusable function or component. Replace all instances of the duplicated code with a call to the new abstraction.
+-   **Remove Dead Code:** Scan the entire file (and related files if possible) to find and remove any:
+    -   Unused imports or packages.
+    -   Unused variables.
+    -   Uncalled functions.
+    -   Uninstantiated classes.
+
+### 3. Improve Code Structure and Simplicity
+-   **Single Responsibility Principle (SRP):** Ensure every function and class has a single, well-defined responsibility. If a function is too long or performs multiple distinct tasks, break it down into smaller, more focused helper functions.
+-   **Logical Organization:** Structure the code so that related functions and variables are grouped together. Functions should be defined close to where they are called.
+-   **Reduce Complexity:** Simplify complex conditional logic. For example, replace deeply nested `if/else` statements with early returns (guard clauses), switch statements, or lookup maps where appropriate.
+    -   **Bad (Nested):**
+        ```
+        function getAccess(user) {
+          if (user) {
+            if (user.isVerified) {
+              return 'Access Granted';
+            } else {
+              return 'User not verified';
+            }
+          } else {
+            return 'No user';
+          }
+        }
+        ```
+    -   **Good (Guard Clauses):**
+        ```
+        function getAccess(user) {
+          if (!user) {
+            return 'No user';
+          }
+          if (!user.isVerified) {
+            return 'User not verified';
+          }
+          return 'Access Granted';
+        }
+        ```
+
+### 4. Enhance Maintainability and Documentation
+-   **Comment the "Why", Not the "What":** Clean code should be self-documenting. Only add comments to explain *why* a particular piece of code exists (e.g., explaining a business rule, a workaround for a bug in a library, or the reasoning behind a non-obvious optimization).
+-   **Add Type Definitions:** For languages like JavaScript or Python, add type hints or JSDoc comments to clarify function signatures, parameters, and return values. For statically-typed languages, ensure types are used correctly and explicitly.
+-   **Suggest Unit Tests:** When performing a significant refactor, recommend or generate basic unit tests to verify that the core functionality remains unchanged. This ensures that the refactoring process does not introduce regressions.
+
