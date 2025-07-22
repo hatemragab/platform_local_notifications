@@ -1,3 +1,16 @@
+## 1.0.5
+Refactor: Improve notifier initialization and error handling
+
+This commit refactors the `PlatformNotifier` class to improve initialization and error handling:
+
+- Added an `_isInitialized` flag to track initialization status.
+- Made `appName` and `data` private with public getters that throw a `StateError` if accessed before initialization.
+- Added safe getters `appNameSafe` and `dataSafe` that return null if not initialized.
+- Wrapped initialization logic in a try-catch block to handle potential errors.
+- Added null checks and error handling throughout the class, particularly in methods that interact with platform-specific notification plugins.
+- Added debug prints for errors and warnings.
+- Ensured `close()` method correctly updates the initialization status.
+- Updated version to 1.0.4.
 ## 1.0.4
 - make the context optional
 

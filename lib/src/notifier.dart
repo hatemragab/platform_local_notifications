@@ -27,27 +27,73 @@ class PlatformNotifier {
       _platformNotifierStream.stream;
 
   static PlatformNotifier get I => _instance;
-  late String appName;
-  late final NotifierData data;
 
-  InitializationSettings get initializationSettings => InitializationSettings(
-        android: data.initializationSettingsAndroid,
-        iOS: data.initializationSettingsDarwom,
-      );
+  // Add initialization tracking
+  bool _isInitialized = false;
+  String? _appName;
+  NotifierData? _data;
+
+  // Safe getters with null checks
+  bool get isInitialized => _isInitialized;
+
+  String get appName {
+    if (!_isInitialized || _appName == null) {
+      throw StateError(
+          'PlatformNotifier has not been initialized. Call init() first.');
+    }
+    return _appName!;
+  }
+
+  NotifierData get data {
+    if (!_isInitialized || _data == null) {
+      throw StateError(
+          'PlatformNotifier has not been initialized. Call init() first.');
+    }
+    return _data!;
+  }
+
+  // Safe getters that return null instead of throwing
+  String? get appNameSafe => _isInitialized ? _appName : null;
+
+  NotifierData? get dataSafe => _isInitialized ? _data : null;
+
+  InitializationSettings get initializationSettings {
+    if (!_isInitialized) {
+      throw StateError(
+          'PlatformNotifier has not been initialized. Call init() first.');
+    }
+    return InitializationSettings(
+      android: data.initializationSettingsAndroid,
+      iOS: data.initializationSettingsDarwom,
+    );
+  }
 
   Future<void> init({
     NotifierData data = const NotifierData(),
     required String appName,
   }) async {
-    this.appName = appName;
-    this.data = data;
-    if (isWeb) {
-      return;
-    }
-    if (isMobile) {
-      await _initForMobile();
-    } else {
-      await _initForDesktop();
+    try {
+      _appName = appName;
+      _data = data;
+
+      if (isWeb) {
+        _isInitialized = true;
+        return;
+      }
+
+      if (isMobile) {
+        await _initForMobile();
+      } else {
+        await _initForDesktop();
+      }
+
+      _isInitialized = true;
+    } catch (e) {
+      _isInitialized = false;
+      if (kDebugMode) {
+        print('Failed to initialize PlatformNotifier: $e');
+      }
+      rethrow;
     }
   }
 
@@ -64,15 +110,21 @@ class PlatformNotifier {
   }
 
   Future<void> _initForMobile() async {
+    if (!_isInitialized || _data == null) {
+      throw StateError('Cannot initialize mobile notifications: data not set');
+    }
+
     try {
       if (Platform.isAndroid) {
         await flutterLocalNotificationsPlugin
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>()
-            ?.createNotificationChannel(data.androidNotificationChannel);
+            ?.createNotificationChannel(_data!.androidNotificationChannel);
       }
     } catch (err) {
-      //
+      if (kDebugMode) {
+        print('Error creating notification channel: $err');
+      }
     }
 
     await flutterLocalNotificationsPlugin.initialize(
@@ -86,36 +138,66 @@ class PlatformNotifier {
   }
 
   void _initActionPortReceiver() {
-    IsolateNameServer.registerPortWithName(
-      _port.sendPort,
-      _portName,
-    );
-    _port.listen((var data) async {
-      final isInput = data[0] as bool;
-      final payload = data[1] as String?;
+    try {
+      IsolateNameServer.registerPortWithName(
+        _port.sendPort,
+        _portName,
+      );
+      _port.listen((var data) async {
+        try {
+          final isInput = data[0] as bool;
+          final payload = data[1] as String?;
 
-      if (isInput) {
-        final text = data[2] as String;
-        _platformNotifierStream.sink
-            .add(PluginNotificationReplyAction(text: text, payload: payload));
-      } else {
-        _platformNotifierStream.sink.add(PluginNotificationMarkRead(payload));
+          if (isInput) {
+            final text = data[2] as String;
+            _platformNotifierStream.sink.add(
+                PluginNotificationReplyAction(text: text, payload: payload));
+          } else {
+            _platformNotifierStream.sink
+                .add(PluginNotificationMarkRead(payload));
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error processing action port data: $e');
+          }
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error setting up action port receiver: $e');
       }
-    });
+    }
   }
 
   Future<void> cancelAll() async {
+    if (!_isInitialized) {
+      if (kDebugMode) {
+        print(
+            'Warning: PlatformNotifier not initialized, cannot cancel notifications');
+      }
+      return;
+    }
     await flutterLocalNotificationsPlugin.cancelAll();
   }
 
   Future<void> cancel(int id, {String? tag}) async {
+    if (!_isInitialized) {
+      if (kDebugMode) {
+        print(
+            'Warning: PlatformNotifier not initialized, cannot cancel notification');
+      }
+      return;
+    }
     await flutterLocalNotificationsPlugin.cancel(id, tag: tag);
   }
 
   Future<void> _initForDesktop() async {
+    if (_appName == null) {
+      throw StateError('App name not set');
+    }
+
     await localNotifier.setup(
-      appName: appName,
-      // The parameter shortcutPolicy only works on Windows
+      appName: _appName!,
       shortcutPolicy: ShortcutPolicy.requireCreate,
     );
   }
@@ -126,24 +208,29 @@ class PlatformNotifier {
     String makeAsRead = "Make as read",
     String reply = "Reply",
     String yourMessage = "Your message...",
-
-    ///user name in the icon person!
     required String userName,
     List<Message>? messages,
     BuildContext? context,
-
-    ///for group chat
     required String? conversationTitle,
   }) async {
+    if (!_isInitialized) {
+      if (kDebugMode) {
+        print(
+            'Warning: PlatformNotifier not initialized, cannot show chat notification');
+      }
+      return;
+    }
+
     if (isWeb || isDesktop) {
       return showPluginNotification(model, context);
     }
+
     File? file;
     try {
       file = await DefaultCacheManager().getSingleFile(userImage);
     } catch (err) {
       if (kDebugMode) {
-        print(err);
+        print('Error loading user image: $err');
       }
     }
 
@@ -179,15 +266,19 @@ class PlatformNotifier {
     return showPluginNotification(model, context);
   }
 
-  AndroidNotificationDetails get _highAndroidNotificationDetails =>
-      AndroidNotificationDetails(
-        "${appName}_notification",
-        "${appName}_notification",
-        channelDescription: "${appName}_notification_channel",
-        importance: Importance.max,
-        priority: Priority.max,
-        setAsGroupSummary: true,
-      );
+  AndroidNotificationDetails get _highAndroidNotificationDetails {
+    if (!_isInitialized || _appName == null) {
+      throw StateError('PlatformNotifier not initialized');
+    }
+    return AndroidNotificationDetails(
+      "${_appName!}_notification",
+      "${_appName!}_notification",
+      channelDescription: "${_appName!}_notification_channel",
+      importance: Importance.max,
+      priority: Priority.max,
+      setAsGroupSummary: true,
+    );
+  }
 
   AndroidNotificationDetails _highAndroidNotificationChatDetails({
     required MessagingStyleInformation styleInformation,
@@ -195,32 +286,41 @@ class PlatformNotifier {
     String makeAsRead = "Make as read",
     String reply = "Reply",
     String yourMessage = "Your message...",
-  }) =>
-      AndroidNotificationDetails(
-        "${appName}_notification",
-        "${appName}_notification",
-        styleInformation: styleInformation,
-        actions: [
-          AndroidNotificationAction(
-            "1",
-            makeAsRead,
-          ),
-          AndroidNotificationAction(
-            "2",
-            reply,
-            allowGeneratedReplies: true,
-            inputs: [
-              AndroidNotificationActionInput(
-                label: yourMessage,
-              )
-            ],
-          ),
-        ],
-        channelDescription: "${appName}_notification_channel",
-        importance: Importance.max,
-        priority: Priority.max,
-        setAsGroupSummary: true,
-      );
+  }) {
+    if (!_isInitialized || _appName == null) {
+      throw StateError('PlatformNotifier not initialized');
+    }
+    return AndroidNotificationDetails(
+      "${_appName!}_notification",
+      "${_appName!}_notification",
+      styleInformation: styleInformation,
+      actions: [
+        AndroidNotificationAction(
+          "1",
+          makeAsRead,
+        ),
+        AndroidNotificationAction(
+          "2",
+          reply,
+          allowGeneratedReplies: true,
+          inputs: [
+            AndroidNotificationActionInput(
+              label: yourMessage,
+            )
+          ],
+        ),
+      ],
+      channelDescription: "${_appName!}_notification_channel",
+      importance: Importance.max,
+      priority: Priority.max,
+      setAsGroupSummary: true,
+    );
+  }
+
+  /// Generates a group key for notification grouping
+  static String _generateGroupKey(String roomId) {
+    return 'chat_$roomId';
+  }
 
   DarwinNotificationDetails get _highDarwinNotificationDetails =>
       const DarwinNotificationDetails(
@@ -233,6 +333,14 @@ class PlatformNotifier {
     ShowPluginNotificationModel model,
     BuildContext? context,
   ) async {
+    if (!_isInitialized) {
+      if (kDebugMode) {
+        print(
+            'Warning: PlatformNotifier not initialized, cannot show notification');
+      }
+      return;
+    }
+
     model.androidNotificationDetails ??= _highAndroidNotificationDetails;
     model.iosDetails ??= _highDarwinNotificationDetails;
 
@@ -255,7 +363,7 @@ class PlatformNotifier {
           macOS: model.macOsDetails ??
               DarwinNotificationDetails(
                 presentSound: true,
-                subtitle: appName,
+                subtitle: _appName ?? 'App',
                 presentBadge: true,
               ),
           linux: model.linux,
@@ -272,8 +380,15 @@ class PlatformNotifier {
   }
 
   void close() {
-    IsolateNameServer.removePortNameMapping(_portName);
-    _platformNotifierStream.close();
+    try {
+      IsolateNameServer.removePortNameMapping(_portName);
+      _platformNotifierStream.close();
+      _isInitialized = false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error closing PlatformNotifier: $e');
+      }
+    }
   }
 
   void _showOverlaySupport({
@@ -285,43 +400,23 @@ class PlatformNotifier {
       title: title,
       content: subtitle,
     );
-
-    // Flushbar(
-    //   message: subtitle,
-    //   icon: Icon(
-    //     Icons.message,
-    //     size: 28.0,
-    //     color: Colors.blue[300],
-    //   ),
-    //   title: title,
-    //   margin: const EdgeInsets.all(6.0),
-    //   flushbarStyle: FlushbarStyle.FLOATING,
-    //   flushbarPosition: FlushbarPosition.TOP,
-    //   textDirection: Directionality.of(context),
-    //   borderRadius: BorderRadius.circular(12),
-    //   duration: duration,
-    //   leftBarIndicatorColor: Colors.blue[300],
-    //   // backgroundColor: background,
-    // ).show(context);
-    // showSimpleNotification(
-    //   Text(title, style: textStyle),
-    //   background: background,
-    //   autoDismiss: true,
-    //   slideDismissDirection: DismissDirection.horizontal,
-    //   subtitle: subtitle == null ? null : Text(subtitle),
-    //   duration: duration,
-    // );
   }
 
   @pragma('vm:entry-point')
   void _onDidReceiveNotificationResponse(NotificationResponse details) {
-    switch (details.notificationResponseType) {
-      case NotificationResponseType.selectedNotification:
-        _platformNotifierStream.sink
-            .add(PluginNotificationClickAction(details.payload));
-        break;
-      case NotificationResponseType.selectedNotificationAction:
-        break;
+    try {
+      switch (details.notificationResponseType) {
+        case NotificationResponseType.selectedNotification:
+          _platformNotifierStream.sink
+              .add(PluginNotificationClickAction(details.payload));
+          break;
+        case NotificationResponseType.selectedNotificationAction:
+          break;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error handling notification response: $e');
+      }
     }
   }
 
@@ -367,19 +462,39 @@ class PlatformNotifier {
 Future<void> onDidReceiveBackgroundNotificationResponse(
   NotificationResponse event,
 ) async {
-  if (event.actionId == "1") {
-    final SendPort? send = IsolateNameServer.lookupPortByName(_portName);
-    send!.send([false, event.payload]);
-    _platformNotifierStream.sink.add(PluginNotificationMarkRead(event.payload));
-  }
-  if (event.actionId == "2") {
-    final payload = event.payload.toString();
-    final text = event.input.toString();
-    final SendPort? send = IsolateNameServer.lookupPortByName(_portName);
-    send!.send([false, event.payload]);
-    send.send([true, payload, text]);
-    _platformNotifierStream.sink
-        .add(PluginNotificationReplyAction(text: text, payload: payload));
-    _platformNotifierStream.sink.add(PluginNotificationMarkRead(payload));
+  try {
+    // Check if the notifier is initialized before accessing data
+    if (!PlatformNotifier.I.isInitialized) {
+      if (kDebugMode) {
+        print(
+            'Warning: PlatformNotifier not initialized in background handler');
+      }
+      return;
+    }
+
+    if (event.actionId == "1") {
+      final SendPort? send = IsolateNameServer.lookupPortByName(_portName);
+      if (send != null) {
+        send.send([false, event.payload]);
+        _platformNotifierStream.sink
+            .add(PluginNotificationMarkRead(event.payload));
+      }
+    }
+    if (event.actionId == "2") {
+      final payload = event.payload.toString();
+      final text = event.input.toString();
+      final SendPort? send = IsolateNameServer.lookupPortByName(_portName);
+      if (send != null) {
+        send.send([false, event.payload]);
+        send.send([true, payload, text]);
+        _platformNotifierStream.sink
+            .add(PluginNotificationReplyAction(text: text, payload: payload));
+        _platformNotifierStream.sink.add(PluginNotificationMarkRead(payload));
+      }
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('Error in background notification handler: $e');
+    }
   }
 }
