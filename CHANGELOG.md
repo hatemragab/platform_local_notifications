@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2024-12-XX
+
+### 🚀 New Features
+
+#### Enhanced Notification Models
+- **`NotificationConfiguration`** - New dedicated configuration class for better initialization settings management
+- **Improved model architecture** - Separated configuration from data models for better organization
+- **Enhanced `ChatNotificationModel`** - Better inheritance structure and improved copyWith methods
+
+#### Background Notification Handling
+- **Enhanced isolate communication** - Improved background notification action handling with better error recovery
+- **Automatic notification cancellation** - Notifications are now automatically cancelled after user actions (reply/mark as read)
+- **Better action response handling** - Improved foreground and background action processing with proper data structure
+
+#### Service Architecture Improvements  
+- **Improved initialization flow** - Better error handling and state management during service initialization
+- **Enhanced platform detection** - More robust platform-specific feature detection and handling
+- **Better resource management** - Improved cleanup and disposal of service resources
+
+### 🔧 Technical Improvements
+
+#### Code Quality & Organization
+- **Separated concerns** - Split configuration models from notification models for better maintainability
+- **Improved naming conventions** - Better class and method names following Dart/Flutter best practices
+- **Enhanced documentation** - Better inline documentation and code comments
+- **Type safety improvements** - Better null safety handling and type annotations
+
+#### Bug Fixes
+- **Fixed background notification actions** - Resolved issues with reply and mark-as-read actions not working properly in background
+- **Improved isolate port handling** - Better port registration and cleanup to prevent memory leaks
+- **Enhanced error handling** - Better error messages and exception handling throughout the service
+- **Fixed notification cancellation** - Proper notification cleanup after user interactions
+
+#### Platform Enhancements
+- **Android manifest configuration** - Added proper receiver configuration for notification actions
+- **Better action handling** - Improved reply and mark-as-read functionality with proper data flow
+- **Enhanced messaging style** - Better chat notification styling and user experience
+
+### 📱 Example App Improvements
+- **Updated example app** - Comprehensive demonstration of all new features
+- **Better UI/UX** - Improved user interface with better status tracking and action feedback
+- **Launch details tracking** - Added functionality to check how the app was launched
+- **Real-time action monitoring** - Live display of notification actions and responses
+
+### 🛠️ Developer Experience
+- **Improved testing** - Enhanced test coverage with better model validation
+- **Better error messages** - More descriptive error messages for debugging
+- **Enhanced debugging** - Better logging and debug information throughout the service
+- **Documentation updates** - Updated inline documentation and code examples
+
+### ⚠️ Important Configuration Changes
+- **Android Manifest Requirement** - Developers must add the following receiver to their Android manifest for notification actions to work properly:
+  ```xml
+  <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+  ```
+
+### 🔄 Breaking Changes
+- **`NotificationData`** - Moved to separate file for better organization (import path changed)
+- **Configuration structure** - Some default configuration values have been updated for better defaults
+
 ## [2.0.0] - 2024-01-XX
 
 ### 🚀 Major Improvements

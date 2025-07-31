@@ -1,4 +1,6 @@
 
+import 'package:v_platform/v_platform.dart';
+
 import '../../platform_local_notifications.dart';
 
 /// Configuration data for the notification plugin
@@ -108,7 +110,7 @@ class NotificationModel {
 /// Model for chat-style notifications
 class ChatNotificationModel extends NotificationModel {
   /// URL or path to the user's profile image
-  final String userImageUrl;
+  final VPlatformFile? userImageUrl;
 
   /// Name of the user sending the message
   final String userName;
@@ -152,7 +154,7 @@ class ChatNotificationModel extends NotificationModel {
     int? id,
     String? title,
     String? body,
-    String? userImageUrl,
+    VPlatformFile? userImageUrl,
     String? userName,
     String? conversationTitle,
     List<Message>? messages,

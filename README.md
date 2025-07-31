@@ -29,8 +29,41 @@ Add the dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  platform_local_notifications: ^2.0.0
+  platform_local_notifications: ^2.1.0
 ```
+
+## Platform Configuration
+
+### Android Setup
+
+For notification actions (reply, mark as read) to work properly on Android, you must add the following receiver to your `android/app/src/main/AndroidManifest.xml` file within the `<application>` tag:
+
+```xml
+<receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+```
+
+**Example AndroidManifest.xml:**
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:label="your_app_name"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        
+        <!-- Your existing activity configuration -->
+        <activity android:name=".MainActivity" ... >
+            <!-- Activity configuration -->
+        </activity>
+        
+        <!-- Add this receiver for notification actions -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+        
+    </application>
+</manifest>
+```
+
+⚠️ **Important**: Without this receiver, notification actions (reply, mark as read) will not work properly on Android devices.
 
 ## Quick Start
 

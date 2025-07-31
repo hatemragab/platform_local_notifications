@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:platform_local_notifications/platform_local_notifications.dart';
+import 'package:v_platform/v_platform.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -164,21 +165,22 @@ class _HomeState extends State<Home> {
 
   void _setupNotificationListeners() {
     PlatformNotifier.actionStream.listen((action) {
-      switch (action.runtimeType) {
+      debugPrint("action is $action");
+      switch (action) {
         case NotificationClickAction _:
-          final clickAction = action as NotificationClickAction;
+          final clickAction = action;
           _updateLastAction('Notification clicked: ${clickAction.payload}');
           break;
 
         case NotificationReplyAction _:
-          final replyAction = action as NotificationReplyAction;
+          final replyAction = action;
           _updateLastAction(
             'User replied: "${replyAction.replyText}" (Payload: ${replyAction.payload})',
           );
           break;
 
         case NotificationMarkReadAction _:
-          final markReadAction = action as NotificationMarkReadAction;
+          final markReadAction = action;
           _updateLastAction(
             'Notification marked as read: ${markReadAction.payload}',
           );
@@ -222,8 +224,10 @@ class _HomeState extends State<Home> {
         id: DateTime.now().microsecond,
         title: 'New Message 💬',
         body: 'Hello! How are you doing today?',
-        userImageUrl:
-            'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+        userImageUrl: VPlatformFile.fromUrl(
+          networkUrl:
+              "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+        ),
         userName: 'John Doe',
         conversationTitle: 'Team Chat',
         markAsReadLabel: 'Mark as Read',

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:platform_local_notifications/platform_local_notifications.dart';
+import 'package:v_platform/v_platform.dart';
 
 void main() {
   group('Platform Local Notifications Tests', () {
@@ -40,14 +41,15 @@ void main() {
         id: 1,
         title: 'Test Title',
         body: 'Test Body',
-        userImageUrl: 'https://example.com/avatar.jpg',
+        userImageUrl: VPlatformFile.fromUrl(
+            networkUrl: 'https://example.com/avatar.jpg'),
         userName: 'John Doe',
         payload: 'test_payload',
       );
       expect(validChatModel.id, 1);
       expect(validChatModel.title, 'Test Title');
       expect(validChatModel.body, 'Test Body');
-      expect(validChatModel.userImageUrl, 'https://example.com/avatar.jpg');
+      expect(validChatModel.userImageUrl?.fullNetworkUrl, 'https://example.com/avatar.jpg');
       expect(validChatModel.userName, 'John Doe');
       expect(validChatModel.payload, 'test_payload');
 
@@ -56,10 +58,10 @@ void main() {
         id: 1,
         title: 'Test Title',
         body: 'Test Body',
-        userImageUrl: '',
+        userImageUrl: null,
         userName: 'John Doe',
       );
-      expect(chatModelWithEmptyImage.userImageUrl, '');
+      expect(chatModelWithEmptyImage.userImageUrl, null);
       expect(chatModelWithEmptyImage.userName, 'John Doe');
 
       // Chat model with empty user name (should still be created)
@@ -67,10 +69,11 @@ void main() {
         id: 1,
         title: 'Test Title',
         body: 'Test Body',
-        userImageUrl: 'https://example.com/avatar.jpg',
+        userImageUrl:
+            VPlatformFile.fromUrl(networkUrl: 'https://example.com/avatar.jpg'),
         userName: '',
       );
-      expect(chatModelWithEmptyName.userImageUrl,
+      expect(chatModelWithEmptyName.userImageUrl?.fullNetworkUrl,
           'https://example.com/avatar.jpg');
       expect(chatModelWithEmptyName.userName, '');
     });

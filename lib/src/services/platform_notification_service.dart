@@ -8,6 +8,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:quick_notify_2/quick_notify.dart';
+import 'package:v_platform/v_platform.dart';
 
 import '../constants/notification_constants.dart';
 import '../models/notification_actions.dart';
@@ -29,7 +30,7 @@ class PlatformNotificationService {
 
   /// Stream controller for notification actions
   final _actionStreamController =
-      StreamController<BaseNotificationAction>.broadcast();
+  StreamController<BaseNotificationAction>.broadcast();
 
   /// Receive port for isolate communication
   final _receivePort = ReceivePort();
@@ -123,7 +124,7 @@ class PlatformNotificationService {
       ),
       onDidReceiveNotificationResponse: _handleNotificationResponse,
       onDidReceiveBackgroundNotificationResponse:
-          onDidReceiveBackgroundNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse,
     );
 
     _setupActionPortReceiver();
@@ -132,8 +133,8 @@ class PlatformNotificationService {
   /// Creates Android notification channel
   Future<void> _createAndroidNotificationChannel() async {
     final androidPlugin =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
 
     await androidPlugin?.createNotificationChannel(
         _notificationData!.androidNotificationChannel);
@@ -149,33 +150,68 @@ class PlatformNotificationService {
 
   /// Sets up the action port receiver for isolate communication
   void _setupActionPortReceiver() {
-    IsolateNameServer.registerPortWithName(
-      _receivePort.sendPort,
-      NotificationConstants.actionReceiverPortName,
-    );
+    try {
+      // ✅ Remove existing port first
+      IsolateNameServer.removePortNameMapping(
+        NotificationConstants.actionReceiverPortName,
+      );
 
-    _receivePort.listen(_handlePortMessage);
+      final registered = IsolateNameServer.registerPortWithName(
+        _receivePort.sendPort,
+        NotificationConstants.actionReceiverPortName,
+      );
+
+      if (!registered) {
+        debugPrint('Failed to register notification action port');
+      }
+
+      _receivePort.listen(_handlePortMessage);
+    } catch (error) {
+      debugPrint('Error setting up action port receiver: $error');
+    }
   }
 
   /// Handles messages from the isolate port
   void _handlePortMessage(dynamic data) {
-    if (data is! List || data.length < 2) return;
+    try {
+      if (data is! Map<String, dynamic>) {
+        debugPrint('Invalid port message format: $data');
+        return;
+      }
 
-    final isInput = data[0] as bool;
-    final payload = data[1] as String?;
+      final actionId = data['actionId'] as String?;
+      final payload = data['payload'] as String?;
+      final notificationId = data['notificationId'] as int?;
+      final replyText = data['replyText'] as String?;
 
-    if (isInput && data.length >= 3) {
-      final text = data[2] as String;
-      _actionStreamController.add(
-        NotificationReplyAction(
-          payload: payload,
-          replyText: text,
-        ),
-      );
-    } else {
-      _actionStreamController.add(
-        NotificationMarkReadAction(payload),
-      );
+      debugPrint('Handling port message - actionId: $actionId, payload: $payload, notificationId: $notificationId');
+
+      if (actionId == NotificationConstants.markAsReadActionId) {
+        debugPrint('Adding mark read action');
+        _actionStreamController.add(
+          NotificationMarkReadAction(payload),
+        );
+
+        // Cancel the notification after marking as read
+        if (notificationId != null) {
+          cancelNotification(notificationId);
+        }
+      } else if (actionId == NotificationConstants.replyActionId) {
+        debugPrint('Adding reply action with text: $replyText');
+        _actionStreamController.add(
+          NotificationReplyAction(
+            payload: payload,
+            replyText: replyText ?? '',
+          ),
+        );
+
+        // Optionally cancel notification after reply
+        if (notificationId != null) {
+          cancelNotification(notificationId);
+        }
+      }
+    } catch (error) {
+      debugPrint('Error handling port message: $error');
     }
   }
 
@@ -208,8 +244,8 @@ class PlatformNotificationService {
   /// Requests iOS notification permissions
   Future<bool?> _requestIOSPermissions() async {
     final iosPlugin =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
+    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
 
     return await iosPlugin?.requestPermissions(
       alert: true,
@@ -222,8 +258,8 @@ class PlatformNotificationService {
   /// Requests Android notification permissions
   Future<bool?> _requestAndroidPermissions() async {
     final androidPlugin =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
 
     return await androidPlugin?.requestNotificationsPermission();
   }
@@ -231,8 +267,8 @@ class PlatformNotificationService {
   /// Requests macOS notification permissions
   Future<bool?> _requestMacOSPermissions() async {
     final macosPlugin =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            MacOSFlutterLocalNotificationsPlugin>();
+    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+        MacOSFlutterLocalNotificationsPlugin>();
 
     return await macosPlugin?.requestPermissions(
       alert: true,
@@ -245,15 +281,14 @@ class PlatformNotificationService {
   /// Shows a standard notification
   Future<void> showNotification({
     required NotificationModel model,
-    BuildContext? context,
   }) async {
     if (!_isInitialized) {
       throw StateError(
           'PlatformNotificationService must be initialized before showing notifications');
     }
 
-    if (isWeb && context != null) {
-      return _showWebNotification(model, context);
+    if (isWeb) {
+      return _showWebNotification(model);
     }
 
     if (isMobile || Platform.isMacOS || Platform.isLinux) {
@@ -268,7 +303,6 @@ class PlatformNotificationService {
   /// Shows a chat-style notification with interactive actions
   Future<void> showChatNotification({
     required ChatNotificationModel model,
-    BuildContext? context,
   }) async {
     if (!_isInitialized) {
       throw StateError(
@@ -276,7 +310,7 @@ class PlatformNotificationService {
     }
 
     if (!supportsChatNotifications) {
-      return showNotification(model: model, context: context);
+      return showNotification(model: model);
     }
 
     final userImageFile = await _loadUserImage(model.userImageUrl);
@@ -286,13 +320,16 @@ class PlatformNotificationService {
       androidDetails: _createChatAndroidDetails(messagingStyle, model),
     );
 
-    return showNotification(model: chatModel, context: null);
+    return showNotification(model: chatModel);
   }
 
   /// Loads user image from URL or cache
-  Future<File?> _loadUserImage(String imageUrl) async {
+  Future<File?> _loadUserImage(VPlatformFile? imageUrl) async {
     try {
-      return await DefaultCacheManager().getSingleFile(imageUrl);
+      if (imageUrl == null) return null;
+      if (imageUrl.fileLocalPath != null) return File(imageUrl.fileLocalPath!);
+      return await DefaultCacheManager().getSingleFile(imageUrl.fullNetworkUrl!,
+          key: imageUrl.getCachedUrlKey);
     } catch (error) {
       debugPrint('Failed to load user image: $error');
       return null;
@@ -301,9 +338,9 @@ class PlatformNotificationService {
 
   /// Creates messaging style for chat notifications
   MessagingStyleInformation _createMessagingStyle(
-    ChatNotificationModel model,
-    File? userImageFile,
-  ) {
+      ChatNotificationModel model,
+      File? userImageFile,
+      ) {
     return MessagingStyleInformation(
       Person(
         important: true,
@@ -333,9 +370,9 @@ class PlatformNotificationService {
 
   /// Creates Android notification details for chat notifications
   AndroidNotificationDetails _createChatAndroidDetails(
-    MessagingStyleInformation messagingStyle,
-    ChatNotificationModel model,
-  ) {
+      MessagingStyleInformation messagingStyle,
+      ChatNotificationModel model,
+      ) {
     return AndroidNotificationDetails(
       model.androidDetails?.channelId ?? '${_appName}_chat_notification',
       model.androidDetails?.channelName ?? '${_appName}_chat_notification',
@@ -346,22 +383,25 @@ class PlatformNotificationService {
         AndroidNotificationAction(
           NotificationConstants.markAsReadActionId,
           model.markAsReadLabel,
-          cancelNotification: true,
+          cancelNotification: false, // Changed to false - we'll handle cancellation manually
+          showsUserInterface: false,
         ),
         AndroidNotificationAction(
           NotificationConstants.replyActionId,
           model.replyLabel,
-          allowGeneratedReplies: true,
           inputs: [
             AndroidNotificationActionInput(
               label: model.replyHint,
+              allowFreeFormInput: true,
             ),
           ],
+          cancelNotification: false, // Changed to false - handle manually
+          showsUserInterface: false,
         ),
       ],
       importance: Importance.max,
       priority: Priority.max,
-      setAsGroupSummary: true,
+      setAsGroupSummary: false,
     );
   }
 
@@ -394,7 +434,7 @@ class PlatformNotificationService {
   }
 
   /// Shows notification on web
-  void _showWebNotification(NotificationModel model, BuildContext? context) {
+  void _showWebNotification(NotificationModel model) {
     QuickNotify.notify(
       title: model.title,
       content: model.body,
@@ -460,8 +500,33 @@ class PlatformNotificationService {
         );
         break;
       case NotificationResponseType.selectedNotificationAction:
-        // Handled in background response
+      // Handle action responses directly here for foreground
+        _handleActionResponse(response);
         break;
+    }
+  }
+
+  /// Handles action responses from notifications
+  void _handleActionResponse(NotificationResponse response) {
+    if (response.actionId == NotificationConstants.markAsReadActionId) {
+      _actionStreamController.add(
+        NotificationMarkReadAction(response.payload),
+      );
+      // Cancel notification after marking as read
+      if (response.id != null) {
+        cancelNotification(response.id!);
+      }
+    } else if (response.actionId == NotificationConstants.replyActionId) {
+      _actionStreamController.add(
+        NotificationReplyAction(
+          payload: response.payload,
+          replyText: response.input ?? '',
+        ),
+      );
+      // Optionally cancel notification after reply
+      if (response.id != null) {
+        cancelNotification(response.id!);
+      }
     }
   }
 
@@ -509,16 +574,14 @@ class PlatformNotifier {
   /// Shows a standard notification
   static Future<void> showNotification({
     required NotificationModel model,
-    BuildContext? context,
   }) =>
-      instance.showNotification(model: model, context: context);
+      instance.showNotification(model: model);
 
   /// Shows a chat-style notification
   static Future<void> showChatNotification({
     required ChatNotificationModel model,
-    BuildContext? context,
   }) =>
-      instance.showChatNotification(model: model, context: context);
+      instance.showChatNotification(model: model);
 
   /// Cancels a specific notification
   static Future<void> cancelNotification(int id, {String? tag}) =>
@@ -548,15 +611,19 @@ Future<void> onDidReceiveBackgroundNotificationResponse(
     NotificationConstants.actionReceiverPortName,
   );
 
-  if (sendPort == null) return;
-
-  if (response.actionId == NotificationConstants.markAsReadActionId) {
-    sendPort.send([false, response.payload]);
-  } else if (response.actionId == NotificationConstants.replyActionId) {
-    final payload = response.payload.toString();
-    final text = response.input.toString();
-
-    sendPort.send([false, response.payload]);
-    sendPort.send([true, payload, text]);
+  if (sendPort == null) {
+    debugPrint('SendPort is null, cannot handle background notification');
+    return;
   }
+
+  // Send structured data instead of array
+  final data = <String, dynamic>{
+    'actionId': response.actionId,
+    'payload': response.payload,
+    'notificationId': response.id,
+    'replyText': response.input,
+  };
+
+  debugPrint('Sending background notification data: $data');
+  sendPort.send(data);
 }
