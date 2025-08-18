@@ -1,7 +1,18 @@
-
-import 'package:v_platform/v_platform.dart';
-
 import '../../platform_local_notifications.dart';
+
+class PlatformFile {
+  final String path;
+  final String? url;
+
+  const PlatformFile({required this.path, this.url});
+
+  String? get fileLocalPath => path.startsWith('http') ? null : path;
+  String? get fullNetworkUrl => url ?? (path.startsWith('http') ? path : null);
+  String get getCachedUrlKey => fullNetworkUrl?.hashCode.toString() ?? path.hashCode.toString();
+
+  @override
+  String toString() => url ?? path;
+}
 
 /// Configuration data for the notification plugin
 class NotificationConfiguration {
@@ -21,8 +32,7 @@ class NotificationConfiguration {
       NotificationConstants.defaultChannelDescription,
       importance: Importance.max,
     ),
-    this.androidSettings =
-        const AndroidInitializationSettings('@mipmap/ic_launcher'),
+    this.androidSettings = const AndroidInitializationSettings('@mipmap/ic_launcher'),
     this.darwinSettings = const DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -110,7 +120,7 @@ class NotificationModel {
 /// Model for chat-style notifications
 class ChatNotificationModel extends NotificationModel {
   /// URL or path to the user's profile image
-  final VPlatformFile? userImageUrl;
+  final PlatformFile? userImageUrl;
 
   /// Name of the user sending the message
   final String userName;
@@ -154,7 +164,7 @@ class ChatNotificationModel extends NotificationModel {
     int? id,
     String? title,
     String? body,
-    VPlatformFile? userImageUrl,
+    PlatformFile? userImageUrl,
     String? userName,
     String? conversationTitle,
     List<Message>? messages,
