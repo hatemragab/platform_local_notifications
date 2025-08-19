@@ -1,14 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:cross_file/cross_file.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:quick_notify_2/quick_notify.dart';
-import 'package:v_platform/v_platform.dart';
 
 import '../constants/notification_constants.dart';
 import '../models/notification_actions.dart';
@@ -29,11 +28,10 @@ class PlatformNotificationService {
   final _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   /// Stream controller for notification actions
-  final _actionStreamController =
-  StreamController<BaseNotificationAction>.broadcast();
+  final _actionStreamController = StreamController<BaseNotificationAction>.broadcast();
 
   /// Receive port for isolate communication
-  final _receivePort = ReceivePort();
+  ReceivePort? _receivePort;
 
   /// Application name
   late String _appName;
@@ -45,8 +43,7 @@ class PlatformNotificationService {
   bool _isInitialized = false;
 
   /// Stream for listening to notification actions
-  Stream<BaseNotificationAction> get actionStream =>
-      _actionStreamController.stream;
+  Stream<BaseNotificationAction> get actionStream => _actionStreamController.stream;
 
   /// Returns true if the service is initialized
   bool get isInitialized => _isInitialized;
@@ -64,8 +61,7 @@ class PlatformNotificationService {
   bool get supportsChatNotifications => PlatformUtils.supportsChatNotifications;
 
   /// Returns true if the current platform supports notification actions
-  bool get supportsNotificationActions =>
-      PlatformUtils.supportsNotificationActions;
+  bool get supportsNotificationActions => PlatformUtils.supportsNotificationActions;
 
   /// Gets notification app launch details
   /// Returns details about how the app was launched (e.g., from notification click)
@@ -110,7 +106,7 @@ class PlatformNotificationService {
   /// Initializes the service for mobile platforms (Android/iOS)
   Future<void> _initializeMobilePlatform() async {
     try {
-      if (Platform.isAndroid) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         await _createAndroidNotificationChannel();
       }
     } catch (error) {
@@ -123,8 +119,7 @@ class PlatformNotificationService {
         iOS: _notificationData!.initializationSettingsDarwin,
       ),
       onDidReceiveNotificationResponse: _handleNotificationResponse,
-      onDidReceiveBackgroundNotificationResponse:
-      onDidReceiveBackgroundNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse: onDidReceiveBackgroundNotificationResponse,
     );
 
     _setupActionPortReceiver();
@@ -132,12 +127,10 @@ class PlatformNotificationService {
 
   /// Creates Android notification channel
   Future<void> _createAndroidNotificationChannel() async {
-    final androidPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
-    await androidPlugin?.createNotificationChannel(
-        _notificationData!.androidNotificationChannel);
+    await androidPlugin?.createNotificationChannel(_notificationData!.androidNotificationChannel);
   }
 
   /// Initializes the service for desktop platforms (Windows/macOS/Linux)
@@ -151,13 +144,22 @@ class PlatformNotificationService {
   /// Sets up the action port receiver for isolate communication
   void _setupActionPortReceiver() {
     try {
+      // Only setup ReceivePort on platforms that support it (not web)
+      if (isWeb) {
+        debugPrint('ReceivePort not supported on web platform');
+        return;
+      }
+
+      // Create ReceivePort only when needed
+      _receivePort = ReceivePort();
+
       // ✅ Remove existing port first
       IsolateNameServer.removePortNameMapping(
         NotificationConstants.actionReceiverPortName,
       );
 
       final registered = IsolateNameServer.registerPortWithName(
-        _receivePort.sendPort,
+        _receivePort!.sendPort,
         NotificationConstants.actionReceiverPortName,
       );
 
@@ -165,7 +167,7 @@ class PlatformNotificationService {
         debugPrint('Failed to register notification action port');
       }
 
-      _receivePort.listen(_handlePortMessage);
+      _receivePort!.listen(_handlePortMessage);
     } catch (error) {
       debugPrint('Error setting up action port receiver: $error');
     }
@@ -218,23 +220,22 @@ class PlatformNotificationService {
   /// Requests notification permissions for the current platform
   Future<bool?> requestPermissions() async {
     if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before requesting permissions');
+      throw StateError('PlatformNotificationService must be initialized before requesting permissions');
     }
 
-    if (isWeb || Platform.isWindows) {
+    if (kIsWeb || (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows)) {
       return QuickNotify.requestPermission();
     }
 
-    if (Platform.isIOS) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
       return await _requestIOSPermissions();
     }
 
-    if (Platform.isAndroid) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return await _requestAndroidPermissions();
     }
 
-    if (Platform.isMacOS) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
       return await _requestMacOSPermissions();
     }
 
@@ -244,8 +245,7 @@ class PlatformNotificationService {
   /// Requests iOS notification permissions
   Future<bool?> _requestIOSPermissions() async {
     final iosPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
 
     return await iosPlugin?.requestPermissions(
       alert: true,
@@ -257,9 +257,8 @@ class PlatformNotificationService {
 
   /// Requests Android notification permissions
   Future<bool?> _requestAndroidPermissions() async {
-    final androidPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
     return await androidPlugin?.requestNotificationsPermission();
   }
@@ -267,8 +266,7 @@ class PlatformNotificationService {
   /// Requests macOS notification permissions
   Future<bool?> _requestMacOSPermissions() async {
     final macosPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        MacOSFlutterLocalNotificationsPlugin>();
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>();
 
     return await macosPlugin?.requestPermissions(
       alert: true,
@@ -283,19 +281,20 @@ class PlatformNotificationService {
     required NotificationModel model,
   }) async {
     if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before showing notifications');
+      throw StateError('PlatformNotificationService must be initialized before showing notifications');
     }
 
     if (isWeb) {
       return _showWebNotification(model);
     }
 
-    if (isMobile || Platform.isMacOS || Platform.isLinux) {
+    if (isMobile ||
+        (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) ||
+        (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux)) {
       await _showMobileNotification(model);
     }
 
-    if (Platform.isWindows) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
       await _showWindowsNotification(model);
     }
   }
@@ -305,8 +304,7 @@ class PlatformNotificationService {
     required ChatNotificationModel model,
   }) async {
     if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before showing notifications');
+      throw StateError('PlatformNotificationService must be initialized before showing notifications');
     }
 
     if (!supportsChatNotifications) {
@@ -324,12 +322,12 @@ class PlatformNotificationService {
   }
 
   /// Loads user image from URL or cache
-  Future<File?> _loadUserImage(VPlatformFile? imageUrl) async {
+  Future<XFile?> _loadUserImage(PlatformFile? imageUrl) async {
     try {
       if (imageUrl == null) return null;
-      if (imageUrl.fileLocalPath != null) return File(imageUrl.fileLocalPath!);
-      return await DefaultCacheManager().getSingleFile(imageUrl.fullNetworkUrl!,
-          key: imageUrl.getCachedUrlKey);
+      if (imageUrl.fileLocalPath != null) return XFile(imageUrl.fileLocalPath!);
+      final file = await DefaultCacheManager().getSingleFile(imageUrl.fullNetworkUrl!, key: imageUrl.getCachedUrlKey);
+      return XFile(file.path);
     } catch (error) {
       debugPrint('Failed to load user image: $error');
       return null;
@@ -338,16 +336,14 @@ class PlatformNotificationService {
 
   /// Creates messaging style for chat notifications
   MessagingStyleInformation _createMessagingStyle(
-      ChatNotificationModel model,
-      File? userImageFile,
-      ) {
+    ChatNotificationModel model,
+    XFile? userImageFile,
+  ) {
     return MessagingStyleInformation(
       Person(
         important: true,
         name: model.userName,
-        icon: userImageFile != null
-            ? BitmapFilePathAndroidIcon(userImageFile.path)
-            : null,
+        icon: userImageFile != null ? BitmapFilePathAndroidIcon(userImageFile.path) : null,
       ),
       conversationTitle: model.conversationTitle,
       groupConversation: model.conversationTitle != null,
@@ -359,9 +355,7 @@ class PlatformNotificationService {
               Person(
                 important: true,
                 name: model.userName,
-                icon: userImageFile != null
-                    ? BitmapFilePathAndroidIcon(userImageFile.path)
-                    : null,
+                icon: userImageFile != null ? BitmapFilePathAndroidIcon(userImageFile.path) : null,
               ),
             ),
           ],
@@ -370,14 +364,13 @@ class PlatformNotificationService {
 
   /// Creates Android notification details for chat notifications
   AndroidNotificationDetails _createChatAndroidDetails(
-      MessagingStyleInformation messagingStyle,
-      ChatNotificationModel model,
-      ) {
+    MessagingStyleInformation messagingStyle,
+    ChatNotificationModel model,
+  ) {
     return AndroidNotificationDetails(
       model.androidDetails?.channelId ?? '${_appName}_chat_notification',
       model.androidDetails?.channelName ?? '${_appName}_chat_notification',
-      channelDescription: model.androidDetails?.channelDescription ??
-          '${_appName}_chat_notification_channel',
+      channelDescription: model.androidDetails?.channelDescription ?? '${_appName}_chat_notification_channel',
       styleInformation: messagingStyle,
       actions: [
         AndroidNotificationAction(
@@ -474,8 +467,7 @@ class PlatformNotificationService {
   /// Cancels a specific notification
   Future<void> cancelNotification(int id, {String? tag}) async {
     if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before canceling notifications');
+      throw StateError('PlatformNotificationService must be initialized before canceling notifications');
     }
 
     await _flutterLocalNotificationsPlugin.cancel(id, tag: tag);
@@ -484,8 +476,7 @@ class PlatformNotificationService {
   /// Cancels all notifications
   Future<void> cancelAllNotifications() async {
     if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before canceling notifications');
+      throw StateError('PlatformNotificationService must be initialized before canceling notifications');
     }
 
     await _flutterLocalNotificationsPlugin.cancelAll();
@@ -500,7 +491,7 @@ class PlatformNotificationService {
         );
         break;
       case NotificationResponseType.selectedNotificationAction:
-      // Handle action responses directly here for foreground
+        // Handle action responses directly here for foreground
         _handleActionResponse(response);
         break;
     }
@@ -538,7 +529,7 @@ class PlatformNotificationService {
       NotificationConstants.actionReceiverPortName,
     );
     _actionStreamController.close();
-    _receivePort.close();
+    _receivePort?.close();
     _isInitialized = false;
   }
 }
@@ -554,12 +545,10 @@ class PlatformNotifier {
   const PlatformNotifier._();
 
   /// The singleton instance of the notification service
-  static PlatformNotificationService get instance =>
-      PlatformNotificationService.instance;
+  static PlatformNotificationService get instance => PlatformNotificationService.instance;
 
   /// Stream for listening to notification actions
-  static Stream<BaseNotificationAction> get actionStream =>
-      instance.actionStream;
+  static Stream<BaseNotificationAction> get actionStream => instance.actionStream;
 
   /// Initializes the notification service
   static Future<void> initialize({
@@ -584,17 +573,14 @@ class PlatformNotifier {
       instance.showChatNotification(model: model);
 
   /// Cancels a specific notification
-  static Future<void> cancelNotification(int id, {String? tag}) =>
-      instance.cancelNotification(id, tag: tag);
+  static Future<void> cancelNotification(int id, {String? tag}) => instance.cancelNotification(id, tag: tag);
 
   /// Cancels all notifications
-  static Future<void> cancelAllNotifications() =>
-      instance.cancelAllNotifications();
+  static Future<void> cancelAllNotifications() => instance.cancelAllNotifications();
 
   /// Gets notification app launch details
   /// Returns details about how the app was launched (e.g., from notification click)
-  static Future<NotificationAppLaunchDetails?> get appLaunchNotification =>
-      instance.appLaunchNotification;
+  static Future<NotificationAppLaunchDetails?> get appLaunchNotification => instance.appLaunchNotification;
 
   /// Disposes the service
   static void dispose() => instance.dispose();
@@ -605,8 +591,7 @@ class PlatformNotifier {
 /// Handles background notification response
 /// This function must be top-level for proper isolate communication
 @pragma('vm:entry-point')
-Future<void> onDidReceiveBackgroundNotificationResponse(
-    NotificationResponse response) async {
+Future<void> onDidReceiveBackgroundNotificationResponse(NotificationResponse response) async {
   final sendPort = IsolateNameServer.lookupPortByName(
     NotificationConstants.actionReceiverPortName,
   );

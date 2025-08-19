@@ -15,8 +15,12 @@ dependencies:
   flutter_local_notifications: ^19.4.0
   local_notifier: ^0.1.6
   flutter_cache_manager: ^3.4.1
-  quick_notify_2: ^0.3.0-dev.0
-  v_platform: ^2.1.4
+  cross_file: ^0.3.4+2
+  # quick_notify_2: ^0.3.0-dev.0
+  quick_notify_2:
+    git:
+      url: https://github.com/raphaexa/quick_notify_2.git
+      ref: main
 
 dev_dependencies:
   flutter_test:

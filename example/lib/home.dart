@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:platform_local_notifications/platform_local_notifications.dart';
-import 'package:v_platform/v_platform.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -61,10 +60,7 @@ class _HomeState extends State<Home> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Service Status',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Service Status', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -73,10 +69,7 @@ class _HomeState extends State<Home> {
                   color: _isInitialized ? Colors.green : Colors.red,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  _isInitialized ? 'Initialized' : 'Not Initialized',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
+                Text(_isInitialized ? 'Initialized' : 'Not Initialized', style: Theme.of(context).textTheme.bodyLarge),
               ],
             ),
           ],
@@ -117,10 +110,7 @@ class _HomeState extends State<Home> {
           onPressed: _isInitialized ? _cancelAllNotifications : null,
           icon: const Icon(Icons.clear_all),
           label: const Text('Cancel All Notifications'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
         ),
         const SizedBox(height: 8),
         ElevatedButton.icon(
@@ -174,16 +164,12 @@ class _HomeState extends State<Home> {
 
         case NotificationReplyAction _:
           final replyAction = action;
-          _updateLastAction(
-            'User replied: "${replyAction.replyText}" (Payload: ${replyAction.payload})',
-          );
+          _updateLastAction('User replied: "${replyAction.replyText}" (Payload: ${replyAction.payload})');
           break;
 
         case NotificationMarkReadAction _:
           final markReadAction = action;
-          _updateLastAction(
-            'Notification marked as read: ${markReadAction.payload}',
-          );
+          _updateLastAction('Notification marked as read: ${markReadAction.payload}');
           break;
       }
     });
@@ -192,11 +178,7 @@ class _HomeState extends State<Home> {
   Future<void> _requestPermissions() async {
     try {
       final isGranted = await PlatformNotifier.requestPermissions();
-      _updateLastAction(
-        isGranted == true
-            ? 'Notification permissions granted'
-            : 'Notification permissions denied',
-      );
+      _updateLastAction(isGranted == true ? 'Notification permissions granted' : 'Notification permissions denied');
     } catch (error) {
       _updateLastAction('Failed to request permissions: $error');
     }
@@ -224,9 +206,8 @@ class _HomeState extends State<Home> {
         id: DateTime.now().microsecond,
         title: 'New Message 💬',
         body: 'Hello! How are you doing today?',
-        userImageUrl: VPlatformFile.fromUrl(
-          networkUrl:
-              "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+        userImageUrl: PlatformFile(
+          path: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
         ),
         userName: 'John Doe',
         conversationTitle: 'Team Chat',
@@ -303,10 +284,7 @@ class _HomeState extends State<Home> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'App Launch Details',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('App Launch Details', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(_launchDetails, style: Theme.of(context).textTheme.bodyMedium),
           ],
@@ -328,16 +306,12 @@ class _HomeState extends State<Home> {
               'Action ID: ${launchDetails.notificationResponse?.actionId ?? 'No action'}\n'
               'Input: ${launchDetails.notificationResponse?.input ?? 'No input'}';
         });
-        _updateLastAction(
-          'Launch details checked - App was launched from notification',
-        );
+        _updateLastAction('Launch details checked - App was launched from notification');
       } else {
         setState(() {
           _launchDetails = 'App was not launched from a notification';
         });
-        _updateLastAction(
-          'Launch details checked - App was not launched from notification',
-        );
+        _updateLastAction('Launch details checked - App was not launched from notification');
       }
     } catch (error) {
       setState(() {

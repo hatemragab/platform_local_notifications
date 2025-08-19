@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:platform_local_notifications/platform_local_notifications.dart';
-import 'package:v_platform/v_platform.dart';
 
 void main() {
   group('Platform Local Notifications Tests', () {
@@ -41,8 +40,7 @@ void main() {
         id: 1,
         title: 'Test Title',
         body: 'Test Body',
-        userImageUrl: VPlatformFile.fromUrl(
-            networkUrl: 'https://example.com/avatar.jpg'),
+        userImageUrl: PlatformFile(path: 'https://example.com/avatar.jpg'),
         userName: 'John Doe',
         payload: 'test_payload',
       );
@@ -69,24 +67,19 @@ void main() {
         id: 1,
         title: 'Test Title',
         body: 'Test Body',
-        userImageUrl:
-            VPlatformFile.fromUrl(networkUrl: 'https://example.com/avatar.jpg'),
+        userImageUrl: PlatformFile(path: 'https://example.com/avatar.jpg'),
         userName: '',
       );
-      expect(chatModelWithEmptyName.userImageUrl?.fullNetworkUrl,
-          'https://example.com/avatar.jpg');
+      expect(chatModelWithEmptyName.userImageUrl?.fullNetworkUrl, 'https://example.com/avatar.jpg');
       expect(chatModelWithEmptyName.userName, '');
     });
 
     test('NotificationData default values', () {
       const notificationData = NotificationData();
 
-      expect(notificationData.androidNotificationChannel.id,
-          'high_importance_channel');
-      expect(notificationData.androidNotificationChannel.name,
-          'High importance notifications');
-      expect(notificationData.initializationSettingsAndroid.defaultIcon,
-          '@mipmap/ic_launcher');
+      expect(notificationData.androidNotificationChannel.id, 'high_importance_channel');
+      expect(notificationData.androidNotificationChannel.name, 'High importance notifications');
+      expect(notificationData.initializationSettingsAndroid.defaultIcon, '@mipmap/ic_launcher');
     });
 
     test('NotificationAction classes', () {
@@ -117,11 +110,9 @@ void main() {
     });
 
     test('NotificationConstants values', () {
-      expect(NotificationConstants.actionReceiverPortName,
-          'v_action_receiver_port');
+      expect(NotificationConstants.actionReceiverPortName, 'v_action_receiver_port');
       expect(NotificationConstants.defaultChannelId, 'high_importance_channel');
-      expect(NotificationConstants.defaultChannelName,
-          'High Importance Notifications');
+      expect(NotificationConstants.defaultChannelName, 'High Importance Notifications');
       expect(NotificationConstants.markAsReadActionId, '1');
       expect(NotificationConstants.replyActionId, '2');
       expect(NotificationConstants.defaultMarkAsReadLabel, 'Mark as read');

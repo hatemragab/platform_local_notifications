@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:v_platform/v_platform.dart';
 
 /// Enum representing different platforms supported by the plugin
 enum SupportedPlatform {
@@ -15,10 +14,15 @@ enum SupportedPlatform {
 /// Extension to provide platform detection methods
 extension PlatformDetection on SupportedPlatform {
   /// Returns true if the platform is mobile (Android or iOS)
-  bool get isMobile => VPlatforms.isMobile;
+  bool get isMobile =>
+      !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
   /// Returns true if the platform is desktop (Windows, macOS, or Linux)
-  bool get isDesktop => VPlatforms.isDeskTop;
+  bool get isDesktop =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.linux);
 
   /// Returns true if the platform supports chat notifications
   bool get supportsChatNotifications => isMobile;
@@ -35,17 +39,24 @@ class PlatformUtils {
   static SupportedPlatform get currentPlatform {
     if (kIsWeb) return SupportedPlatform.web;
 
-    if (VPlatforms.isAndroid) return SupportedPlatform.android;
-    if (VPlatforms.isIOS) return SupportedPlatform.ios;
-    if (VPlatforms.isWindows) return SupportedPlatform.windows;
-    if (VPlatforms.isMacOs) return SupportedPlatform.macos;
-    if (VPlatforms.isLinux) return SupportedPlatform.linux;
-
-    return SupportedPlatform.unknown;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return SupportedPlatform.android;
+      case TargetPlatform.iOS:
+        return SupportedPlatform.ios;
+      case TargetPlatform.windows:
+        return SupportedPlatform.windows;
+      case TargetPlatform.macOS:
+        return SupportedPlatform.macos;
+      case TargetPlatform.linux:
+        return SupportedPlatform.linux;
+      default:
+        return SupportedPlatform.unknown;
+    }
   }
 
   /// Returns true if running on web
-  static bool get isWeb => VPlatforms.isWeb;
+  static bool get isWeb => kIsWeb;
 
   /// Returns true if running on mobile platforms
   static bool get isMobile => currentPlatform.isMobile;
@@ -54,10 +65,8 @@ class PlatformUtils {
   static bool get isDesktop => currentPlatform.isDesktop;
 
   /// Returns true if the current platform supports chat notifications
-  static bool get supportsChatNotifications =>
-      currentPlatform.supportsChatNotifications;
+  static bool get supportsChatNotifications => currentPlatform.supportsChatNotifications;
 
   /// Returns true if the current platform supports notification actions
-  static bool get supportsNotificationActions =>
-      currentPlatform.supportsNotificationActions;
+  static bool get supportsNotificationActions => currentPlatform.supportsNotificationActions;
 }
