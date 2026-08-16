@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-08-17
+
+### Changed
+
+- Updated `v_platform` to `^2.2.0` for its current cross-platform file APIs and WebAssembly-compatible implementation.
+- Replaced the deprecated `VPlatforms.isDeskTop` alias with `VPlatforms.isDesktop`.
+- Aligned the declared minimums with `v_platform` 2.2.0: Dart 3.4 and Flutter 3.22.
+
+### Fixed
+
+- Made the example package path portable and replaced its stale counter test with notification-demo coverage.
+
+### Maintenance
+
+- Removed generated Flutter plugin metadata from version control.
+
 ## [2.1.0] - 2024-12-XX
 
 ### 🚀 New Features

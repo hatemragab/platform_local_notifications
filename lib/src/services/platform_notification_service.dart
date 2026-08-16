@@ -30,7 +30,7 @@ class PlatformNotificationService {
 
   /// Stream controller for notification actions
   final _actionStreamController =
-  StreamController<BaseNotificationAction>.broadcast();
+      StreamController<BaseNotificationAction>.broadcast();
 
   /// Receive port for isolate communication
   final _receivePort = ReceivePort();
@@ -124,7 +124,7 @@ class PlatformNotificationService {
       ),
       onDidReceiveNotificationResponse: _handleNotificationResponse,
       onDidReceiveBackgroundNotificationResponse:
-      onDidReceiveBackgroundNotificationResponse,
+          onDidReceiveBackgroundNotificationResponse,
     );
 
     _setupActionPortReceiver();
@@ -133,8 +133,8 @@ class PlatformNotificationService {
   /// Creates Android notification channel
   Future<void> _createAndroidNotificationChannel() async {
     final androidPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
 
     await androidPlugin?.createNotificationChannel(
         _notificationData!.androidNotificationChannel);
@@ -184,7 +184,8 @@ class PlatformNotificationService {
       final notificationId = data['notificationId'] as int?;
       final replyText = data['replyText'] as String?;
 
-      debugPrint('Handling port message - actionId: $actionId, payload: $payload, notificationId: $notificationId');
+      debugPrint(
+          'Handling port message - actionId: $actionId, payload: $payload, notificationId: $notificationId');
 
       if (actionId == NotificationConstants.markAsReadActionId) {
         debugPrint('Adding mark read action');
@@ -244,8 +245,8 @@ class PlatformNotificationService {
   /// Requests iOS notification permissions
   Future<bool?> _requestIOSPermissions() async {
     final iosPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
 
     return await iosPlugin?.requestPermissions(
       alert: true,
@@ -258,8 +259,8 @@ class PlatformNotificationService {
   /// Requests Android notification permissions
   Future<bool?> _requestAndroidPermissions() async {
     final androidPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
 
     return await androidPlugin?.requestNotificationsPermission();
   }
@@ -267,8 +268,8 @@ class PlatformNotificationService {
   /// Requests macOS notification permissions
   Future<bool?> _requestMacOSPermissions() async {
     final macosPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        MacOSFlutterLocalNotificationsPlugin>();
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            MacOSFlutterLocalNotificationsPlugin>();
 
     return await macosPlugin?.requestPermissions(
       alert: true,
@@ -338,9 +339,9 @@ class PlatformNotificationService {
 
   /// Creates messaging style for chat notifications
   MessagingStyleInformation _createMessagingStyle(
-      ChatNotificationModel model,
-      File? userImageFile,
-      ) {
+    ChatNotificationModel model,
+    File? userImageFile,
+  ) {
     return MessagingStyleInformation(
       Person(
         important: true,
@@ -370,9 +371,9 @@ class PlatformNotificationService {
 
   /// Creates Android notification details for chat notifications
   AndroidNotificationDetails _createChatAndroidDetails(
-      MessagingStyleInformation messagingStyle,
-      ChatNotificationModel model,
-      ) {
+    MessagingStyleInformation messagingStyle,
+    ChatNotificationModel model,
+  ) {
     return AndroidNotificationDetails(
       model.androidDetails?.channelId ?? '${_appName}_chat_notification',
       model.androidDetails?.channelName ?? '${_appName}_chat_notification',
@@ -383,7 +384,8 @@ class PlatformNotificationService {
         AndroidNotificationAction(
           NotificationConstants.markAsReadActionId,
           model.markAsReadLabel,
-          cancelNotification: false, // Changed to false - we'll handle cancellation manually
+          cancelNotification:
+              false, // Changed to false - we'll handle cancellation manually
           showsUserInterface: false,
         ),
         AndroidNotificationAction(
@@ -500,7 +502,7 @@ class PlatformNotificationService {
         );
         break;
       case NotificationResponseType.selectedNotificationAction:
-      // Handle action responses directly here for foreground
+        // Handle action responses directly here for foreground
         _handleActionResponse(response);
         break;
     }

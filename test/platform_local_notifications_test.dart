@@ -41,15 +41,16 @@ void main() {
         id: 1,
         title: 'Test Title',
         body: 'Test Body',
-        userImageUrl: VPlatformFile.fromUrl(
-            networkUrl: 'https://example.com/avatar.jpg'),
+        userImageUrl:
+            VPlatformFile.fromUrl(networkUrl: 'https://example.com/avatar.jpg'),
         userName: 'John Doe',
         payload: 'test_payload',
       );
       expect(validChatModel.id, 1);
       expect(validChatModel.title, 'Test Title');
       expect(validChatModel.body, 'Test Body');
-      expect(validChatModel.userImageUrl?.fullNetworkUrl, 'https://example.com/avatar.jpg');
+      expect(validChatModel.userImageUrl?.fullNetworkUrl,
+          'https://example.com/avatar.jpg');
       expect(validChatModel.userName, 'John Doe');
       expect(validChatModel.payload, 'test_payload');
 

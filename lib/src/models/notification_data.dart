@@ -1,4 +1,3 @@
-
 import '../../platform_local_notifications.dart';
 
 /// Configuration data for the notification plugin
