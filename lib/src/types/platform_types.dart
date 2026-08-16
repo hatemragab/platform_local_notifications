@@ -18,7 +18,7 @@ extension PlatformDetection on SupportedPlatform {
   bool get isMobile => VPlatforms.isMobile;
 
   /// Returns true if the platform is desktop (Windows, macOS, or Linux)
-  bool get isDesktop => VPlatforms.isDeskTop;
+  bool get isDesktop => VPlatforms.isDesktop;
 
   /// Returns true if the platform supports chat notifications
   bool get supportsChatNotifications => isMobile;

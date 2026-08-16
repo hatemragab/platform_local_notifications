@@ -4,13 +4,15 @@
 **Issue:** [WebAssembly (WASM) support roadmap?](https://github.com/hatemragab/platform_local_notifications/issues/5)
 **Related work:** [PR #6 — `feat: adds support for WASM`](https://github.com/hatemragab/platform_local_notifications/pull/6)
 
+> **2026-08-17 update:** `v_platform` 2.2.0 has been published and adopted. It removes `universal_html` and moves local-file access behind WASM-safe conditional helpers, closing the `v_platform` branch of the compiler failure. `quick_notify_2` still imports `dart:html`, so issue #5 is not complete yet.
+
 ## Decision
 
 WASM support is achievable, but PR #6 should not be merged as-is. The recommended implementation is a 3.0 modernization that upgrades to `flutter_local_notifications` 22.3.0, uses its maintained web backend, and removes the two dependencies that currently introduce legacy web libraries. This produces one notification backend for display, cancellation, IDs, payloads, launch handling, and actions instead of maintaining a separate custom web implementation.
 
 ## What Currently Blocks WASM
 
-`flutter build web --wasm` fails through two dependency paths:
+The 2.1.0 baseline failed through two dependency paths:
 
 ```text
 platform_local_notifications
@@ -75,7 +77,7 @@ dependencies:
   flutter_cache_manager: ^3.4.2
 ```
 
-Remove `quick_notify_2` and `local_notifier`. Prefer removing `v_platform` from this package as well. If retaining `VPlatformFile` is mandatory, `v_platform` must first receive and publish its own verified WASM-safe release using conditional IO helpers and `package:web`; merely raising its version constraint will not solve the current imports.
+Remove `quick_notify_2` and `local_notifier`. `v_platform` 2.2.0 may now be retained when preserving the existing `VPlatformFile` API is the priority; a future package-owned image type would still reduce public coupling.
 
 ## Implementation Design
 

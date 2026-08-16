@@ -4,6 +4,8 @@
 **Baseline:** `main` at `1195604` (`platform_local_notifications` 2.1.0)
 **Scope:** Architecture, API, dependencies, tests, documentation, package health, and representative platform builds.
 
+> **2026-08-17 update:** Release 2.2.0 adopts `v_platform` 2.2.0 for its WASM-safe conditional file helpers and removal of browser-DOM dependencies. `quick_notify_2` remains the package's outstanding WASM blocker, so the broader backend modernization recommendations still apply.
+
 ## Executive Conclusion
 
 The package provides a useful cross-platform facade, but its current implementation is not yet a reliable six-platform abstraction. The source analyzes cleanly and the six root unit tests pass, yet only 7.8% of executable lines are covered and the 628-line core service has no coverage. More importantly, initialization, display, cancellation, payloads, and actions are routed through different plugins on different platforms, producing inconsistent behavior.
@@ -52,7 +54,7 @@ All mutating validation was performed in an isolated checkout. The example's dep
 | Example widget test | Failed at `example/test/widget_test.dart:19` | Test is the obsolete Flutter counter template, not the notification demo |
 | `flutter pub publish --dry-run` | Warning for stable package depending on prerelease `quick_notify_2` | Current dependency policy is unsuitable for a stable release |
 | Web JavaScript build | Passed | Traditional web compilation currently works |
-| Web WASM build | Failed | `quick_notify_2` and `v_platform` transitively import `dart:html` |
+| Web WASM build | Failed at the 2.1.0 baseline | `v_platform` 2.2.0 removes its legacy imports; `quick_notify_2` remains incompatible |
 | Android debug build | Passed with upgrade warnings | Gradle 8.12, AGP 8.7.3, and Kotlin 2.1.0 are approaching Flutter's unsupported range |
 | iOS simulator build | Passed after Flutter migrated generated project files | Committed example scaffolding is stale; minimum iOS target was raised to 13 |
 | macOS debug build | Passed after generated-project migration | `local_notifier` uses APIs deprecated since macOS 11 and lacks Swift Package Manager support |
@@ -67,7 +69,7 @@ Linux and Windows native builds were not available on the macOS audit host. Succ
 | `flutter_cache_manager` | 3.4.1 | 3.4.2 | 3.4.2 | Patch-update after image-path tests exist |
 | `local_notifier` | 0.1.6 | 0.1.6 | 0.1.6 | Remove after consolidating the desktop backend |
 | `quick_notify_2` | 0.3.0-dev.0 | Same | Same | Remove; prerelease, inactive, and blocks stable publishing/WASM |
-| `v_platform` | 2.1.4 | 2.1.5 | 2.1.5 | Replace or narrow; its web imports currently block WASM |
+| `v_platform` | 2.1.4 | 2.2.0 | 2.2.0 | Adopted in 2.2.0; retain for compatibility and reassess public coupling in 3.0 |
 | `flutter_lints` | 6.0.0 | 6.0.0 | 6.0.0 | Keep |
 
 The latest [`flutter_local_notifications` changelog](https://pub.dev/packages/flutter_local_notifications/changelog) shows that version 20 converted major methods such as `initialize`, `show`, and `cancel` to named arguments. Version 21 requires Flutter 3.38.1, Dart 3.10, Android API 24, iOS 13, macOS 10.15, compile SDK 36, and AGP 8.11.1. Version 22 adds web support. A temporary constraint change to 22.3.0 resolved successfully but produced seven source diagnostics: the named-argument migrations and a new `notificationDismissed` response enum case. This suggests a manageable code migration, but the platform and public-API consequences make it a major release.
@@ -131,7 +133,7 @@ PR #6 contains useful WASM intent but should not be merged directly: it replaces
 - Raise SDK/toolchain floors deliberately and upgrade `flutter_local_notifications` to 22.x.
 - Migrate named arguments and handle `notificationDismissed` explicitly.
 - Add all applicable upstream initialization settings and verify web permissions.
-- Remove `quick_notify_2` and `local_notifier`; remove or isolate `v_platform`.
+- Remove `quick_notify_2` and `local_notifier`; retain WASM-safe `v_platform` 2.2.0 or replace it with a package-owned image abstraction.
 - Introduce the package-owned image/configuration API, providing deprecations in a transitional 2.x release if downstream migration time is needed.
 - Replace the upstream wildcard export with intentional compatibility exports.
 

@@ -3,7 +3,9 @@ import 'package:platform_local_notifications/platform_local_notifications.dart';
 import 'package:v_platform/v_platform.dart';
 
 class Home extends StatefulWidget {
-  const Home({super.key});
+  const Home({super.key, this.initializeNotifications = true});
+
+  final bool initializeNotifications;
 
   @override
   State<Home> createState() => _HomeState();
@@ -17,13 +19,17 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    _initializeNotifications();
-    _setupNotificationListeners();
+    if (widget.initializeNotifications) {
+      _initializeNotifications();
+      _setupNotificationListeners();
+    }
   }
 
   @override
   void dispose() {
-    PlatformNotifier.dispose();
+    if (widget.initializeNotifications) {
+      PlatformNotifier.dispose();
+    }
     super.dispose();
   }
 

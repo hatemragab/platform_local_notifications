@@ -1,13 +1,13 @@
 name: platform_local_notifications
 description: A comprehensive cross-platform local notifications plugin for Flutter supporting Android, iOS, Web, Windows, macOS, and Linux with chat-style notifications and interactive actions.
-version: 2.1.0
+version: 2.2.0
 homepage: https://github.com/hatemragab/platform_local_notifications
 issue_tracker: https://github.com/hatemragab/platform_local_notifications/issues
 repository: https://github.com/hatemragab/platform_local_notifications
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
-  flutter: ">=3.3.0"
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
 
 dependencies:
   flutter:
@@ -16,7 +16,7 @@ dependencies:
   local_notifier: ^0.1.6
   flutter_cache_manager: ^3.4.1
   quick_notify_2: ^0.3.0-dev.0
-  v_platform: ^2.1.4
+  v_platform: ^2.2.0
 
 dev_dependencies:
   flutter_test:

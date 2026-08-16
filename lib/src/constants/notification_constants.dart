@@ -35,6 +35,4 @@ class NotificationConstants {
 
   /// Default app icon path for Android
   static const String defaultAndroidIconPath = '@mipmap/ic_launcher';
-
-
 }

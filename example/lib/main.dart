@@ -7,7 +7,9 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.initializeNotifications = true});
+
+  final bool initializeNotifications;
 
   // This widget is the root of your application.
   @override
@@ -15,11 +17,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue),
       darkTheme: ThemeData.dark(),
-      home: const Home(),
+      home: Home(initializeNotifications: initializeNotifications),
     );
   }
 }
