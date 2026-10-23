@@ -1,0 +1,29 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test example/lib example/test
+      - run: flutter analyze
+      - run: flutter test --coverage
+      - run: flutter test
+        working-directory: example
+      - run: flutter build web
+        working-directory: example
+      - run: flutter build web --wasm
+        working-directory: example
+      - run: flutter pub publish --dry-run

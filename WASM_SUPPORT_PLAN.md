@@ -1,5 +1,12 @@
 # Issue #5: WebAssembly Support Plan
 
+> **2026-10-24 maintenance update:** This document records the earlier assessment.
+> The current working tree fixes backend routing and lifecycle issues, replaces
+> `quick_notify_2` with `package:web`, and adds regression tests and CI.
+> JavaScript and WebAssembly example builds now pass. The proposed breaking
+> 3.0 migration now adopts plugin 22.3.2 and the latest direct dependencies;
+> see README and CHANGELOG for current behavior and SDK requirements.
+
 **Prepared:** 2026-08-16
 **Issue:** [WebAssembly (WASM) support roadmap?](https://github.com/hatemragab/platform_local_notifications/issues/5)
 **Related work:** [PR #6 — `feat: adds support for WASM`](https://github.com/hatemragab/platform_local_notifications/pull/6)

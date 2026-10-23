@@ -1,547 +1,424 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:isolate';
-import 'dart:ui';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:local_notifier/local_notifier.dart';
-import 'package:quick_notify_2/quick_notify.dart';
-import 'package:v_platform/v_platform.dart';
+import 'package:uuid/uuid.dart';
 
 import '../constants/notification_constants.dart';
 import '../models/notification_actions.dart';
 import '../models/notification_data.dart';
 import '../models/notification_models.dart';
+import '../platform/native_support.dart';
+import '../platform/web_notifications.dart';
 import '../types/platform_types.dart';
 
-/// Main service for handling cross-platform local notifications
+/// Main service for handling cross-platform local notifications.
 class PlatformNotificationService {
   PlatformNotificationService._();
 
   static final _instance = PlatformNotificationService._();
 
-  /// Singleton instance of the service
+  /// Singleton instance of the service.
   static PlatformNotificationService get instance => _instance;
 
-  /// Flutter local notifications plugin instance
   final _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
-  /// Stream controller for notification actions
-  final _actionStreamController =
+  final _nativeSupport = NativeNotificationSupport();
+  final _webBackend = WebNotificationBackend();
+  // A fresh controller after disposal keeps the singleton reusable while
+  // completing subscriptions associated with the previous lifecycle.
+  var _actionStreamController =
       StreamController<BaseNotificationAction>.broadcast();
-
-  /// Receive port for isolate communication
-  final _receivePort = ReceivePort();
-
-  /// Application name
-  late String _appName;
-
-  /// Notification configuration data
-  NotificationData? _notificationData;
-
-  /// Flag indicating if the service is initialized
+  NotificationData _notificationData = const NotificationData();
+  String _appName = '';
   bool _isInitialized = false;
+  Future<void>? _initialization;
+  int _generation = 0;
 
-  /// Stream for listening to notification actions
+  /// Stream for listening to notification actions.
   Stream<BaseNotificationAction> get actionStream =>
       _actionStreamController.stream;
 
-  /// Returns true if the service is initialized
+  /// Returns true if the service is initialized.
   bool get isInitialized => _isInitialized;
 
-  /// Returns true if running on web
+  /// Returns true if running on web.
   bool get isWeb => PlatformUtils.isWeb;
 
-  /// Returns true if running on mobile platforms
+  /// Returns true if running on mobile platforms.
   bool get isMobile => PlatformUtils.isMobile;
 
-  /// Returns true if running on desktop platforms
+  /// Returns true if running on desktop platforms.
   bool get isDesktop => PlatformUtils.isDesktop;
 
-  /// Returns true if the current platform supports chat notifications
+  /// Whether built-in Android messaging style and chat actions are available.
   bool get supportsChatNotifications => PlatformUtils.supportsChatNotifications;
 
-  /// Returns true if the current platform supports notification actions
+  /// Whether built-in reply and mark-as-read actions are available.
   bool get supportsNotificationActions =>
       PlatformUtils.supportsNotificationActions;
 
-  /// Gets notification app launch details
-  /// Returns details about how the app was launched (e.g., from notification click)
-  Future<NotificationAppLaunchDetails?> get appLaunchNotification =>
-      _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+  /// Gets native notification launch details, or null on web.
+  Future<NotificationAppLaunchDetails?> get appLaunchNotification async {
+    _ensureInitialized();
+    if (isWeb) {
+      return null;
+    }
+    return _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+  }
 
-  /// Initializes the notification service
-  ///
-  /// [appName] - The name of the application
-  /// [notificationData] - Configuration data for notifications
+  /// Initializes the notification service. Concurrent calls share initialization;
+  /// subsequent calls retain the configuration of the first successful call.
   Future<void> initialize({
     required String appName,
     NotificationData notificationData = const NotificationData(),
-  }) async {
+  }) {
+    if (_isInitialized) return Future<void>.value();
+    final pending = _initialization;
+    if (pending != null) return pending;
+    if (appName.trim().isEmpty) {
+      return Future<void>.error(
+        ArgumentError.value(appName, 'appName', 'Must not be blank'),
+      );
+    }
+    final generation = _generation;
     _appName = appName;
     _notificationData = notificationData;
-    if (_isInitialized) {
-      debugPrint('PlatformNotificationService is already initialized');
-      return;
-    }
+    final initialization = Future<void>.microtask(
+      () => _initialize(generation),
+    );
+    _initialization = initialization;
+    return initialization;
+  }
 
-    if (isWeb) {
-      _isInitialized = true;
-      return;
-    }
-
-    try {
-      if (isMobile) {
-        await _initializeMobilePlatform();
+  Future<void> _initialize(int generation) async {
+    final pendingResponses = <NotificationResponse>[];
+    void onResponse(NotificationResponse response) {
+      if (generation != _generation) return;
+      if (_isInitialized) {
+        _handleNotificationResponse(response);
       } else {
-        await _initializeDesktopPlatform();
+        // Linux can report the launching notification during initialization.
+        pendingResponses.add(response);
       }
-
-      _isInitialized = true;
-      debugPrint('PlatformNotificationService initialized successfully');
-    } catch (error) {
-      debugPrint('Failed to initialize PlatformNotificationService: $error');
-      rethrow;
-    }
-  }
-
-  /// Initializes the service for mobile platforms (Android/iOS)
-  Future<void> _initializeMobilePlatform() async {
-    try {
-      if (Platform.isAndroid) {
-        await _createAndroidNotificationChannel();
-      }
-    } catch (error) {
-      debugPrint('Failed to create Android notification channel: $error');
     }
 
-    await _flutterLocalNotificationsPlugin.initialize(
-      InitializationSettings(
-        android: _notificationData!.initializationSettingsAndroid,
-        iOS: _notificationData!.initializationSettingsDarwin,
-      ),
-      onDidReceiveNotificationResponse: _handleNotificationResponse,
-      onDidReceiveBackgroundNotificationResponse:
-          onDidReceiveBackgroundNotificationResponse,
-    );
-
-    _setupActionPortReceiver();
-  }
-
-  /// Creates Android notification channel
-  Future<void> _createAndroidNotificationChannel() async {
-    final androidPlugin =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-
-    await androidPlugin?.createNotificationChannel(
-        _notificationData!.androidNotificationChannel);
-  }
-
-  /// Initializes the service for desktop platforms (Windows/macOS/Linux)
-  Future<void> _initializeDesktopPlatform() async {
-    await localNotifier.setup(
-      appName: _appName,
-      shortcutPolicy: ShortcutPolicy.requireCreate,
-    );
-  }
-
-  /// Sets up the action port receiver for isolate communication
-  void _setupActionPortReceiver() {
     try {
-      // ✅ Remove existing port first
-      IsolateNameServer.removePortNameMapping(
-        NotificationConstants.actionReceiverPortName,
-      );
-
-      final registered = IsolateNameServer.registerPortWithName(
-        _receivePort.sendPort,
-        NotificationConstants.actionReceiverPortName,
-      );
-
-      if (!registered) {
-        debugPrint('Failed to register notification action port');
-      }
-
-      _receivePort.listen(_handlePortMessage);
-    } catch (error) {
-      debugPrint('Error setting up action port receiver: $error');
-    }
-  }
-
-  /// Handles messages from the isolate port
-  void _handlePortMessage(dynamic data) {
-    try {
-      if (data is! Map<String, dynamic>) {
-        debugPrint('Invalid port message format: $data');
-        return;
-      }
-
-      final actionId = data['actionId'] as String?;
-      final payload = data['payload'] as String?;
-      final notificationId = data['notificationId'] as int?;
-      final replyText = data['replyText'] as String?;
-
-      debugPrint(
-          'Handling port message - actionId: $actionId, payload: $payload, notificationId: $notificationId');
-
-      if (actionId == NotificationConstants.markAsReadActionId) {
-        debugPrint('Adding mark read action');
-        _actionStreamController.add(
-          NotificationMarkReadAction(payload),
+      if (generation != _generation) return;
+      final platform = PlatformUtils.currentPlatform;
+      if (platform == SupportedPlatform.unknown) {
+        throw UnsupportedError(
+          'Notifications are unavailable on this platform',
         );
-
-        // Cancel the notification after marking as read
-        if (notificationId != null) {
-          cancelNotification(notificationId);
-        }
-      } else if (actionId == NotificationConstants.replyActionId) {
-        debugPrint('Adding reply action with text: $replyText');
-        _actionStreamController.add(
-          NotificationReplyAction(
-            payload: payload,
-            replyText: replyText ?? '',
+      }
+      if (!isWeb) {
+        final initialized = await _flutterLocalNotificationsPlugin.initialize(
+          settings: InitializationSettings(
+            android: _notificationData.initializationSettingsAndroid,
+            iOS: _notificationData.initializationSettingsDarwin,
+            macOS: _notificationData.initializationSettingsDarwin,
+            linux: _notificationData.initializationSettingsLinux,
+            windows:
+                _notificationData.initializationSettingsWindows ??
+                _defaultWindowsSettings(),
           ),
+          onDidReceiveNotificationResponse: onResponse,
+          onDidReceiveBackgroundNotificationResponse:
+              onDidReceiveBackgroundNotificationResponse,
         );
-
-        // Optionally cancel notification after reply
-        if (notificationId != null) {
-          cancelNotification(notificationId);
+        // On Apple platforms this result reports permission, not setup success.
+        if (initialized != true &&
+            platform != SupportedPlatform.ios &&
+            platform != SupportedPlatform.macos) {
+          throw StateError('Native notification initialization failed');
+        }
+        if (generation != _generation) return;
+        if (platform == SupportedPlatform.android) {
+          await _flutterLocalNotificationsPlugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >()
+              ?.createNotificationChannel(
+                _notificationData.androidNotificationChannel,
+              );
+        }
+        if (generation != _generation) return;
+        if (isMobile) {
+          _nativeSupport.startActionReceiver(onResponse);
         }
       }
-    } catch (error) {
-      debugPrint('Error handling port message: $error');
+      if (generation == _generation) {
+        _isInitialized = true;
+        for (final response in pendingResponses) {
+          _handleNotificationResponse(response);
+        }
+        pendingResponses.clear();
+      }
+    } catch (_) {
+      if (generation == _generation) _nativeSupport.dispose();
+      rethrow;
+    } finally {
+      _initialization = null;
     }
   }
 
-  /// Requests notification permissions for the current platform
+  WindowsInitializationSettings _defaultWindowsSettings() {
+    final guid = const Uuid().v5(
+      Namespace.url.value,
+      'https://github.com/hatemragab/platform_local_notifications/apps/$_appName',
+    );
+    return WindowsInitializationSettings(
+      appName: _appName,
+      appUserModelId:
+          'PlatformLocalNotifications.App.${guid.replaceAll('-', '')}',
+      guid: guid,
+    );
+  }
+
+  void _ensureInitialized() {
+    if (!_isInitialized) {
+      throw StateError(
+        'PlatformNotificationService must be initialized before use',
+      );
+    }
+  }
+
+  /// Requests standard notification permissions. Critical-alert entitlement is
+  /// not requested automatically. Linux and Windows have no runtime prompt.
   Future<bool?> requestPermissions() async {
-    if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before requesting permissions');
+    _ensureInitialized();
+    switch (PlatformUtils.currentPlatform) {
+      case SupportedPlatform.web:
+        return _webBackend.requestPermissions();
+      case SupportedPlatform.android:
+        return _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.requestNotificationsPermission();
+      case SupportedPlatform.ios:
+        return _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >()
+            ?.requestPermissions(alert: true, badge: true, sound: true);
+      case SupportedPlatform.macos:
+        return _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              MacOSFlutterLocalNotificationsPlugin
+            >()
+            ?.requestPermissions(alert: true, badge: true, sound: true);
+      case SupportedPlatform.windows:
+      case SupportedPlatform.linux:
+        return true;
+      case SupportedPlatform.unknown:
+        return false;
     }
-
-    if (isWeb || Platform.isWindows) {
-      return QuickNotify.requestPermission();
-    }
-
-    if (Platform.isIOS) {
-      return await _requestIOSPermissions();
-    }
-
-    if (Platform.isAndroid) {
-      return await _requestAndroidPermissions();
-    }
-
-    if (Platform.isMacOS) {
-      return await _requestMacOSPermissions();
-    }
-
-    return false;
   }
 
-  /// Requests iOS notification permissions
-  Future<bool?> _requestIOSPermissions() async {
-    final iosPlugin =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
-
-    return await iosPlugin?.requestPermissions(
-      alert: true,
-      badge: true,
-      critical: true,
-      sound: true,
-    );
-  }
-
-  /// Requests Android notification permissions
-  Future<bool?> _requestAndroidPermissions() async {
-    final androidPlugin =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-
-    return await androidPlugin?.requestNotificationsPermission();
-  }
-
-  /// Requests macOS notification permissions
-  Future<bool?> _requestMacOSPermissions() async {
-    final macosPlugin =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            MacOSFlutterLocalNotificationsPlugin>();
-
-    return await macosPlugin?.requestPermissions(
-      alert: true,
-      critical: true,
-      badge: true,
-      sound: true,
-    );
-  }
-
-  /// Shows a standard notification
-  Future<void> showNotification({
-    required NotificationModel model,
-  }) async {
-    if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before showing notifications');
-    }
-
+  /// Shows a notification. IDs must fit a signed 32-bit integer.
+  Future<void> showNotification({required NotificationModel model}) async {
+    _ensureInitialized();
+    _validateModel(model);
+    final generation = _generation;
     if (isWeb) {
-      return _showWebNotification(model);
+      return _webBackend.show(model, () {
+        if (_isInitialized && generation == _generation) {
+          _actionStreamController.add(NotificationClickAction(model.payload));
+        }
+      });
     }
-
-    if (isMobile || Platform.isMacOS || Platform.isLinux) {
-      await _showMobileNotification(model);
-    }
-
-    if (Platform.isWindows) {
-      await _showWindowsNotification(model);
-    }
-  }
-
-  /// Shows a chat-style notification with interactive actions
-  Future<void> showChatNotification({
-    required ChatNotificationModel model,
-  }) async {
-    if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before showing notifications');
-    }
-
-    if (!supportsChatNotifications) {
-      return showNotification(model: model);
-    }
-
-    final userImageFile = await _loadUserImage(model.userImageUrl);
-    final messagingStyle = _createMessagingStyle(model, userImageFile);
-
-    final chatModel = model.copyWith(
-      androidDetails: _createChatAndroidDetails(messagingStyle, model),
-    );
-
-    return showNotification(model: chatModel);
-  }
-
-  /// Loads user image from URL or cache
-  Future<File?> _loadUserImage(VPlatformFile? imageUrl) async {
-    try {
-      if (imageUrl == null) return null;
-      if (imageUrl.fileLocalPath != null) return File(imageUrl.fileLocalPath!);
-      return await DefaultCacheManager().getSingleFile(imageUrl.fullNetworkUrl!,
-          key: imageUrl.getCachedUrlKey);
-    } catch (error) {
-      debugPrint('Failed to load user image: $error');
-      return null;
-    }
-  }
-
-  /// Creates messaging style for chat notifications
-  MessagingStyleInformation _createMessagingStyle(
-    ChatNotificationModel model,
-    File? userImageFile,
-  ) {
-    return MessagingStyleInformation(
-      Person(
-        important: true,
-        name: model.userName,
-        icon: userImageFile != null
-            ? BitmapFilePathAndroidIcon(userImageFile.path)
-            : null,
-      ),
-      conversationTitle: model.conversationTitle,
-      groupConversation: model.conversationTitle != null,
-      messages: model.messages ??
-          [
-            Message(
-              model.body,
-              DateTime.now().toLocal(),
-              Person(
-                important: true,
-                name: model.userName,
-                icon: userImageFile != null
-                    ? BitmapFilePathAndroidIcon(userImageFile.path)
-                    : null,
-              ),
-            ),
-          ],
-    );
-  }
-
-  /// Creates Android notification details for chat notifications
-  AndroidNotificationDetails _createChatAndroidDetails(
-    MessagingStyleInformation messagingStyle,
-    ChatNotificationModel model,
-  ) {
-    return AndroidNotificationDetails(
-      model.androidDetails?.channelId ?? '${_appName}_chat_notification',
-      model.androidDetails?.channelName ?? '${_appName}_chat_notification',
-      channelDescription: model.androidDetails?.channelDescription ??
-          '${_appName}_chat_notification_channel',
-      styleInformation: messagingStyle,
-      actions: [
-        AndroidNotificationAction(
-          NotificationConstants.markAsReadActionId,
-          model.markAsReadLabel,
-          cancelNotification:
-              false, // Changed to false - we'll handle cancellation manually
-          showsUserInterface: false,
-        ),
-        AndroidNotificationAction(
-          NotificationConstants.replyActionId,
-          model.replyLabel,
-          inputs: [
-            AndroidNotificationActionInput(
-              label: model.replyHint,
-              allowFreeFormInput: true,
-            ),
-          ],
-          cancelNotification: false, // Changed to false - handle manually
-          showsUserInterface: false,
-        ),
-      ],
-      importance: Importance.max,
-      priority: Priority.max,
-      setAsGroupSummary: false,
-    );
-  }
-
-  /// Shows notification on mobile platforms
-  Future<void> _showMobileNotification(NotificationModel model) async {
-    final androidDetails = model.androidDetails ?? _getDefaultAndroidDetails();
-    final iosDetails = model.iosDetails ?? _getDefaultIOSDetails();
-    final macosDetails = model.macOsDetails ?? _getDefaultMacOSDetails();
-
     await _flutterLocalNotificationsPlugin.show(
-      model.id,
-      model.title,
-      model.body,
-      NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-        macOS: macosDetails,
-        linux: model.linuxDetails,
+      id: model.id,
+      title: model.title,
+      body: model.body,
+      notificationDetails: NotificationDetails(
+        android: model.androidDetails ?? _defaultAndroidDetails(),
+        iOS:
+            model.iosDetails ??
+            const DarwinNotificationDetails(
+              badgeNumber: NotificationConstants.defaultBadgeNumber,
+              presentSound: true,
+              presentBadge: true,
+            ),
+        macOS:
+            model.macOsDetails ??
+            DarwinNotificationDetails(
+              presentSound: true,
+              subtitle: _appName,
+              presentBadge: true,
+            ),
+        linux: model.linuxDetails ?? const LinuxNotificationDetails(),
       ),
       payload: model.payload,
     );
   }
 
-  /// Shows notification on Windows
-  Future<void> _showWindowsNotification(NotificationModel model) async {
-    await QuickNotify.notify(
-      title: model.title,
-      content: model.body,
-    );
-  }
-
-  /// Shows notification on web
-  void _showWebNotification(NotificationModel model) {
-    QuickNotify.notify(
-      title: model.title,
-      content: model.body,
-    );
-  }
-
-  /// Gets default Android notification details
-  AndroidNotificationDetails _getDefaultAndroidDetails() {
-    return AndroidNotificationDetails(
-      '${_appName}_notification',
-      '${_appName}_notification',
-      channelDescription: '${_appName}_notification_channel',
-      importance: Importance.max,
-      priority: Priority.max,
-      setAsGroupSummary: true,
-    );
-  }
-
-  /// Gets default iOS notification details
-  DarwinNotificationDetails _getDefaultIOSDetails() {
-    return const DarwinNotificationDetails(
-      badgeNumber: NotificationConstants.defaultBadgeNumber,
-      presentSound: true,
-      presentBadge: true,
-    );
-  }
-
-  /// Gets default macOS notification details
-  DarwinNotificationDetails _getDefaultMacOSDetails() {
-    return DarwinNotificationDetails(
-      presentSound: true,
-      subtitle: _appName,
-      presentBadge: true,
-    );
-  }
-
-  /// Cancels a specific notification
-  Future<void> cancelNotification(int id, {String? tag}) async {
-    if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before canceling notifications');
-    }
-
-    await _flutterLocalNotificationsPlugin.cancel(id, tag: tag);
-  }
-
-  /// Cancels all notifications
-  Future<void> cancelAllNotifications() async {
-    if (!_isInitialized) {
-      throw StateError(
-          'PlatformNotificationService must be initialized before canceling notifications');
-    }
-
-    await _flutterLocalNotificationsPlugin.cancelAll();
-  }
-
-  /// Handles notification response
-  void _handleNotificationResponse(NotificationResponse response) {
-    switch (response.notificationResponseType) {
-      case NotificationResponseType.selectedNotification:
-        _actionStreamController.add(
-          NotificationClickAction(response.payload),
-        );
-        break;
-      case NotificationResponseType.selectedNotificationAction:
-        // Handle action responses directly here for foreground
-        _handleActionResponse(response);
-        break;
-    }
-  }
-
-  /// Handles action responses from notifications
-  void _handleActionResponse(NotificationResponse response) {
-    if (response.actionId == NotificationConstants.markAsReadActionId) {
-      _actionStreamController.add(
-        NotificationMarkReadAction(response.payload),
+  void _validateModel(NotificationModel model) {
+    if (!model.isValid) {
+      throw ArgumentError.value(
+        model.id,
+        'model.id',
+        'Must fit a signed 32-bit integer',
       );
-      // Cancel notification after marking as read
-      if (response.id != null) {
-        cancelNotification(response.id!);
-      }
-    } else if (response.actionId == NotificationConstants.replyActionId) {
-      _actionStreamController.add(
-        NotificationReplyAction(
-          payload: response.payload,
-          replyText: response.input ?? '',
+    }
+  }
+
+  /// Shows Android messaging style with reply and mark-as-read actions.
+  /// Other platforms receive a standard notification with the same payload.
+  Future<void> showChatNotification({
+    required ChatNotificationModel model,
+  }) async {
+    _ensureInitialized();
+    _validateModel(model);
+    if (!supportsChatNotifications) return showNotification(model: model);
+    final generation = _generation;
+    final imagePath = await _nativeSupport.loadImage(model.userImageUrl);
+    if (generation != _generation) {
+      throw StateError('Notification service was disposed');
+    }
+    final sender = Person(
+      important: true,
+      name: model.userName,
+      icon: imagePath == null ? null : BitmapFilePathAndroidIcon(imagePath),
+    );
+    final style = MessagingStyleInformation(
+      sender,
+      conversationTitle: model.conversationTitle,
+      groupConversation: model.conversationTitle != null,
+      messages: model.messages ?? [Message(model.body, DateTime.now(), sender)],
+    );
+    final details = model.androidDetails;
+    final channel = _notificationData.androidNotificationChannel;
+    return showNotification(
+      model: model.copyWith(
+        androidDetails: AndroidNotificationDetails(
+          details?.channelId ?? channel.id,
+          details?.channelName ?? channel.name,
+          channelDescription:
+              details?.channelDescription ?? channel.description,
+          icon: details?.icon,
+          importance: details?.importance ?? channel.importance,
+          priority: details?.priority ?? Priority.max,
+          playSound: details?.playSound ?? channel.playSound,
+          sound: details?.sound ?? channel.sound,
+          enableVibration: details?.enableVibration ?? channel.enableVibration,
+          vibrationPattern:
+              details?.vibrationPattern ?? channel.vibrationPattern,
+          groupKey: details?.groupKey,
+          tag: details?.tag,
+          color: details?.color,
+          styleInformation: style,
+          actions: [
+            AndroidNotificationAction(
+              NotificationConstants.markAsReadActionId,
+              model.markAsReadLabel,
+            ),
+            AndroidNotificationAction(
+              NotificationConstants.replyActionId,
+              model.replyLabel,
+              inputs: [AndroidNotificationActionInput(label: model.replyHint)],
+            ),
+          ],
         ),
-      );
-      // Optionally cancel notification after reply
-      if (response.id != null) {
-        cancelNotification(response.id!);
-      }
+      ),
+    );
+  }
+
+  AndroidNotificationDetails _defaultAndroidDetails() {
+    final channel = _notificationData.androidNotificationChannel;
+    return AndroidNotificationDetails(
+      channel.id,
+      channel.name,
+      channelDescription: channel.description,
+      importance: channel.importance,
+      priority: Priority.max,
+      playSound: channel.playSound,
+      sound: channel.sound,
+      enableVibration: channel.enableVibration,
+      vibrationPattern: channel.vibrationPattern,
+      enableLights: channel.enableLights,
+      ledColor: channel.ledColor,
+      channelShowBadge: channel.showBadge,
+    );
+  }
+
+  /// Cancels a notification through the backend that displayed it.
+  /// Android tags apply only to Android notifications.
+  Future<void> cancelNotification(int id, {String? tag}) async {
+    _ensureInitialized();
+    if (isWeb) {
+      _webBackend.cancel(id);
+    } else {
+      await _flutterLocalNotificationsPlugin.cancel(id: id, tag: tag);
     }
   }
 
-  /// Disposes the service and cleans up resources
-  void dispose() {
-    if (!_isInitialized) return;
+  /// Cancels notifications owned by the current backend.
+  Future<void> cancelAllNotifications() async {
+    _ensureInitialized();
+    if (isWeb) {
+      _webBackend.cancelAll();
+    } else {
+      await _flutterLocalNotificationsPlugin.cancelAll();
+    }
+  }
 
-    IsolateNameServer.removePortNameMapping(
-      NotificationConstants.actionReceiverPortName,
-    );
-    _actionStreamController.close();
-    _receivePort.close();
+  void _handleNotificationResponse(NotificationResponse response) {
+    if (!_isInitialized ||
+        response.notificationResponseType ==
+            NotificationResponseType.notificationDismissed) {
+      return;
+    }
+    if (response.notificationResponseType ==
+        NotificationResponseType.selectedNotification) {
+      _actionStreamController.add(NotificationClickAction(response.payload));
+      return;
+    }
+    switch (response.actionId) {
+      case NotificationConstants.markAsReadActionId:
+        _actionStreamController.add(
+          NotificationMarkReadAction(response.payload),
+        );
+      case NotificationConstants.replyActionId:
+        _actionStreamController.add(
+          NotificationReplyAction(
+            payload: response.payload,
+            replyText: response.input ?? '',
+          ),
+        );
+      default:
+        return;
+    }
+    // Android action buttons dismiss natively, even if no main isolate exists.
+    // Foreground/custom actions also get best-effort cancellation here.
+    final id = response.id;
+    if (id != null) {
+      unawaited(
+        cancelNotification(id).catchError((Object _) {
+          debugPrint('Unable to cancel notification after action');
+        }),
+      );
+    }
+  }
+
+  /// Releases action ports and backend listeners. Existing stream subscriptions
+  /// complete. Subscribe again when initializing a new lifecycle.
+  void dispose() {
+    _generation++;
     _isInitialized = false;
+    _nativeSupport.dispose();
+    if (PlatformUtils.currentPlatform == SupportedPlatform.windows) {
+      _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            FlutterLocalNotificationsWindows
+          >()
+          ?.dispose();
+    }
+    _webBackend.dispose();
+    final previousController = _actionStreamController;
+    _actionStreamController =
+        StreamController<BaseNotificationAction>.broadcast();
+    unawaited(previousController.close());
   }
 }
 
@@ -574,16 +451,13 @@ class PlatformNotifier {
   static Future<bool?> requestPermissions() => instance.requestPermissions();
 
   /// Shows a standard notification
-  static Future<void> showNotification({
-    required NotificationModel model,
-  }) =>
+  static Future<void> showNotification({required NotificationModel model}) =>
       instance.showNotification(model: model);
 
   /// Shows a chat-style notification
   static Future<void> showChatNotification({
     required ChatNotificationModel model,
-  }) =>
-      instance.showChatNotification(model: model);
+  }) => instance.showChatNotification(model: model);
 
   /// Cancels a specific notification
   static Future<void> cancelNotification(int id, {String? tag}) =>
@@ -602,30 +476,14 @@ class PlatformNotifier {
   static void dispose() => instance.dispose();
 }
 
-// Top-level functions for background notification handling
-
-/// Handles background notification response
-/// This function must be top-level for proper isolate communication
+/// Forwards background actions to the running main isolate. When the app is
+/// terminated, no main-isolate stream listener exists to receive these events.
 @pragma('vm:entry-point')
 Future<void> onDidReceiveBackgroundNotificationResponse(
-    NotificationResponse response) async {
-  final sendPort = IsolateNameServer.lookupPortByName(
-    NotificationConstants.actionReceiverPortName,
-  );
-
-  if (sendPort == null) {
-    debugPrint('SendPort is null, cannot handle background notification');
-    return;
+  NotificationResponse response,
+) async {
+  if (response.notificationResponseType ==
+      NotificationResponseType.selectedNotificationAction) {
+    NativeNotificationSupport().sendBackgroundResponse(response);
   }
-
-  // Send structured data instead of array
-  final data = <String, dynamic>{
-    'actionId': response.actionId,
-    'payload': response.payload,
-    'notificationId': response.id,
-    'replyText': response.input,
-  };
-
-  debugPrint('Sending background notification data: $data');
-  sendPort.send(data);
 }

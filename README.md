@@ -1,486 +1,274 @@
 # Platform Local Notifications
 
-A comprehensive cross-platform local notifications plugin for Flutter supporting Android, iOS, Web, Windows, macOS, and Linux with chat-style notifications and interactive actions.
-
-## Features
-
-- 🌍 **Cross-Platform Support**: Works on all major Flutter platforms
-- 💬 **Chat Notifications**: Interactive notifications with reply functionality
-- 🔔 **Standard Notifications**: Simple, customizable notifications
-- 🎯 **Action Handling**: Handle notification clicks, replies, and mark-as-read actions
-- 🔐 **Permission Management**: Automatic permission requests for each platform
-- 🖼️ **Image Caching**: Automatic caching of user profile images
-- 📱 **Platform Optimization**: Platform-specific optimizations and features
-
-## Supported Platforms
-
-| Platform | Standard Notifications | Chat Notifications | Actions |
-| -------- | ---------------------- | ------------------ | ------- |
-| Android  | ✅                     | ✅                 | ✅      |
-| iOS      | ✅                     | ✅                 | ✅      |
-| Web      | ✅                     | ⚠️ (Limited)       | ❌      |
-| Windows  | ✅                     | ❌                 | ❌      |
-| macOS    | ✅                     | ❌                 | ❌      |
-| Linux    | ✅                     | ❌                 | ❌      |
+A Flutter facade for local notifications on Android, iOS, macOS, Linux,
+Windows, and web. Android includes messaging-style notifications with reply
+and mark-as-read actions. Other platforms display chat models as standard
+notifications.
 
 ## Installation
 
-Add the dependency to your `pubspec.yaml`:
-
 ```yaml
 dependencies:
-  platform_local_notifications: ^2.1.0
+  platform_local_notifications: ^3.0.0
+  # Only needed when constructing chat avatars:
+  v_platform: ^2.2.0
 ```
 
-## Platform Configuration
+Version 3.0 requires Dart 3.13 and Flutter 3.47 or newer.
+It uses `flutter_local_notifications: ^22.3.2`, `flutter_cache_manager: ^3.4.5`,
+and `web: ^1.1.2`. All direct package and example dependencies use their latest
+stable versions. Flutter itself pins `material_color_utilities` and `test_api`;
+these are kept at the SDK-compatible versions without dependency overrides.
 
-### Android Setup
+The package re-exports the native notification plugin. Calls made directly to
+that plugin now use named parameters; the `PlatformNotifier` facade remains
+unchanged. See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md).
 
-For notification actions (reply, mark as read) to work properly on Android, you must add the following receiver to your `android/app/src/main/AndroidManifest.xml` file within the `<application>` tag:
+## Standalone Material and Cupertino
+
+The package itself uses Flutter foundation and native notification types without
+requiring Material or Cupertino widgets. Consumers can use either of Flutter's
+standalone design libraries. The example uses `material_ui: ^1.8.0`, and its
+regression suite also exercises the notification facade under
+`cupertino_ui: ^1.1.4`. No legacy `package:flutter/material.dart` or
+`package:flutter/cupertino.dart` imports remain in maintained package/example code.
+A compatibility bridge is only needed if your own widget subtree contains
+unmigrated third-party widgets; the notification service does not need one.
+
+## Platform capabilities
+
+| Platform | Standard notifications | Built-in chat actions | Backend |
+| --- | --- | --- | --- |
+| Android | Yes | Reply, mark as read | flutter_local_notifications |
+| iOS | Yes | No; standard fallback | flutter_local_notifications |
+| macOS | Yes | No; standard fallback | flutter_local_notifications |
+| Linux | Yes | No; standard fallback | flutter_local_notifications |
+| Windows | Yes | No; standard fallback | flutter_local_notifications |
+| Web | Supported desktop browsers | No; standard fallback | Browser Notifications API |
+
+Click events include the model's payload. OS settings can still suppress
+notifications even when a permission request succeeds. Linux and Windows
+have no application runtime permission prompt, so `requestPermissions()`
+returns `true` there; this does not verify system notification settings.
+
+Web notifications require HTTPS or localhost and permission requested from a
+user gesture. This package uses page-scoped notifications: keep the page
+open to receive clicks. Mobile browsers that require service-worker
+notifications, including iOS browsers, are not supported by this backend.
+Both JavaScript and WebAssembly compilation are supported; compilation does
+not establish browser permission or delivery support.
+
+## Setup
+
+### Android
+
+Use Android API 24 or newer, compile SDK 36, Java 17, AGP 8.11.1 or newer,
+and core library desugaring as required by
+[flutter_local_notifications 22.3.2](https://pub.dev/packages/flutter_local_notifications/versions/22.3.2).
+The example uses Gradle 9.3.1, AGP 9.1.0, and built-in Kotlin with Java 17.
+
+Add this receiver inside your manifest's `<application>` for chat actions:
 
 ```xml
-<receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+<receiver
+    android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
+    android:exported="false" />
 ```
 
-**Example AndroidManifest.xml:**
+Network avatars also require `android.permission.INTERNET` in the main
+manifest. Provide an Android notification icon resource suitable for your
+app; the default is `@mipmap/ic_launcher`.
 
-```xml
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application
-        android:label="your_app_name"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
-        
-        <!-- Your existing activity configuration -->
-        <activity android:name=".MainActivity" ... >
-            <!-- Activity configuration -->
-        </activity>
-        
-        <!-- Add this receiver for notification actions -->
-        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
-        
-    </application>
-</manifest>
+### iOS and macOS
+
+For foreground notification presentation, set the notification center's
+delegate in your app delegate, as shown in the example's iOS runner:
+
+```swift
+UNUserNotificationCenter.current().delegate = self
 ```
 
-⚠️ **Important**: Without this receiver, notification actions (reply, mark as read) will not work properly on Android devices.
+The example adopts UIScene and Swift Package Manager on Apple platforms.
 
-## Quick Start
+For additional native setup, custom categories, or background handlers,
+follow the underlying plugin's platform instructions. Built-in chat action
+buttons are Android-only. Critical-alert permission is not requested by the
+facade; applications with the required entitlement can use the exported
+platform plugin directly.
 
-### 1. Initialize the Service
+### Linux and Windows
+
+Linux requires a running desktop notification server. Windows uses the native
+notification plugin with an application name, app user model ID, and GUID.
+Defaults derive a stable identity from `appName`; production applications should
+provide `NotificationData.initializationSettingsWindows` explicitly to keep
+identity stable across application renames. The legacy `local_notifier`
+dependency is removed, including its deprecated macOS notification APIs.
+See the [example](example/) for native runner configuration.
+
+## Usage
 
 ```dart
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
 import 'package:platform_local_notifications/platform_local_notifications.dart';
+import 'package:v_platform/v_platform.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await PlatformNotifier.initialize(appName: 'My App');
-
-  runApp(MyApp());
+  // runApp(...);
 }
-```
 
-### 2. Request Permissions
+Future<bool?> requestFromButton() => PlatformNotifier.requestPermissions();
 
-```dart
-Future<void> requestNotificationPermissions() async {
-  final isGranted = await PlatformNotifier.requestPermissions();
-
-  if (isGranted == true) {
-    print('Notification permissions granted');
-  } else {
-    print('Notification permissions denied');
-  }
-}
-```
-
-### 3. Show a Standard Notification
-
-```dart
-Future<void> showSimpleNotification() async {
-  final notificationModel = NotificationModel(
-    id: DateTime.now().millisecondsSinceEpoch,
-    title: 'Hello!',
-    body: 'This is a simple notification',
-    payload: 'notification_data',
+Future<void> showMessage() async {
+  await PlatformNotifier.showChatNotification(
+    model: ChatNotificationModel(
+      id: 42,
+      title: 'New message',
+      body: 'Hello!',
+      userName: 'Alex',
+      userImageUrl: VPlatformFile.fromUrl(
+        networkUrl: 'https://example.com/avatar.jpg',
+      ),
+      payload: 'conversation-42',
+    ),
   );
-
-  await PlatformNotifier.showNotification(model: notificationModel);
 }
-```
 
-### 4. Show a Chat Notification
+Future<void> showStandard() => PlatformNotifier.showNotification(
+  model: const NotificationModel(
+    id: 43,
+    title: 'Reminder',
+    body: 'Your meeting starts soon.',
+    payload: 'meeting-43',
+  ),
+);
 
-```dart
-Future<void> showChatNotification() async {
-  final chatModel = ChatNotificationModel(
-    id: DateTime.now().millisecondsSinceEpoch,
-    title: 'New Message',
-    body: 'Hello! How are you?',
-    userImageUrl: 'https://example.com/avatar.jpg',
-    userName: 'John Doe',
-    conversationTitle: 'Group Chat',
-    payload: 'chat_data',
-  );
-
-  await PlatformNotifier.showChatNotification(model: chatModel);
-}
-```
-
-### 5. Handle Notification Actions
-
-```dart
-void setupNotificationListeners() {
-  PlatformNotifier.actionStream.listen((action) {
-    switch (action.runtimeType) {
-      case NotificationClickAction _:
-        final clickAction = action as NotificationClickAction;
-        print('Notification clicked: ${clickAction.payload}');
+StreamSubscription<BaseNotificationAction> listenToActions() {
+  return PlatformNotifier.actionStream.listen((action) {
+    switch (action) {
+      case NotificationClickAction():
+        // Navigate using action.payload.
         break;
-
-      case NotificationReplyAction _:
-        final replyAction = action as NotificationReplyAction;
-        print('User replied: ${replyAction.replyText}');
-        print('Payload: ${replyAction.payload}');
+      case NotificationReplyAction():
+        // Send action.replyText to the conversation in action.payload.
         break;
-
-      case NotificationMarkReadAction _:
-        final markReadAction = action as NotificationMarkReadAction;
-        print('Notification marked as read: ${markReadAction.payload}');
+      case NotificationMarkReadAction():
+        // Mark the conversation in action.payload as read.
         break;
     }
   });
 }
 ```
 
-### 6. Check App Launch Details
+Notification IDs must fit a signed 32-bit integer (`-2147483648` through
+`2147483647`). Reusing an ID replaces the notification on supporting
+platforms. Do not use epoch milliseconds directly: those exceed the native
+ID range. Empty titles and bodies remain allowed for custom native layouts.
+`model.isValid` checks the identifier before delivery.
+
+Avatars are optional (`userImageUrl: null`), loaded only for Android chat,
+and cached for network images. Missing files and failed or slow downloads
+fall back to text without blocking notification delivery indefinitely.
+
+## Configuration
 
 ```dart
-Future<void> checkAppLaunchDetails() async {
-  final launchDetails = await PlatformNotifier.appLaunchNotification;
-
-  if (launchDetails != null) {
-    print('App was launched from notification!');
-    print('Did notification launch app: ${launchDetails.didNotificationLaunchApp}');
-    print('Payload: ${launchDetails.notificationResponse?.payload}');
-    print('Action ID: ${launchDetails.notificationResponse?.actionId}');
-    print('Input: ${launchDetails.notificationResponse?.input}');
-  } else {
-    print('App was not launched from a notification');
-  }
-}
-```
-
-## Advanced Usage
-
-### Custom Configuration
-
-```dart
-final customConfig = NotificationData(
+const data = NotificationData(
   androidNotificationChannel: AndroidNotificationChannel(
-    'custom_channel',
-    'Custom Notifications',
+    'messages',
+    'Messages',
+    description: 'Incoming messages',
     importance: Importance.high,
   ),
-  initializationSettingsAndroid: AndroidInitializationSettings('@mipmap/ic_launcher'),
   initializationSettingsDarwin: DarwinInitializationSettings(
-    requestAlertPermission: true,
-    requestBadgePermission: true,
-    requestSoundPermission: true,
+    requestAlertPermission: false,
+    requestBadgePermission: false,
+    requestSoundPermission: false,
+  ),
+  initializationSettingsLinux: LinuxInitializationSettings(
+    defaultActionName: 'Open',
   ),
 );
 
-await PlatformNotifier.initialize(
-  appName: 'My App',
-  notificationData: customConfig,
-);
+// During application startup:
+// await PlatformNotifier.initialize(appName: 'My App', notificationData: data);
 ```
 
-### Custom Notification Details
+`NotificationData` controls initialization. The older
+`NotificationConfiguration` value type remains available for compatibility;
+it is not accepted by `initialize`. The configured Android channel is used
+for both standard and chat defaults. Individual models can provide
+platform-specific notification details. Android chat generates its own
+messaging style and action buttons, retaining channel, icon, sound,
+vibration, tag, grouping, priority, importance, and color overrides.
+Android channel settings are persisted by the OS; changing a channel's
+importance or sound after creation requires a new channel ID or user action
+in system settings.
+
+Concurrent initialization calls share one operation. Once initialized,
+subsequent calls retain the first configuration. A failed initialization can
+be retried. Configure Apple permission prompts explicitly if you want to
+request permission later from a button.
+
+## Cancellation, launch, and lifecycle
 
 ```dart
-final notificationModel = NotificationModel(
-  id: 1,
-  title: 'Custom Notification',
-  body: 'With custom styling',
-  payload: 'custom_data',
-  androidDetails: AndroidNotificationDetails(
-    'custom_channel',
-    'Custom Channel',
-    channelDescription: 'Custom notification channel',
-    importance: Importance.max,
-    priority: Priority.high,
-    showWhen: true,
-    enableVibration: true,
-    playSound: true,
-  ),
-  iosDetails: DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-    badgeNumber: 1,
-  ),
-  macOsDetails: DarwinNotificationDetails(
-    presentSound: true,
-    subtitle: 'Custom Subtitle',
-    presentBadge: true,
-  ),
-);
+Future<void> cancelMessage() => PlatformNotifier.cancelNotification(42);
+Future<void> cancelEverything() => PlatformNotifier.cancelAllNotifications();
 
-await PlatformNotifier.showNotification(model: notificationModel);
-```
-
-### Custom Chat Notification
-
-```dart
-final chatModel = ChatNotificationModel(
-  id: 1,
-  title: 'New Message',
-  body: 'Hello from John!',
-  userImageUrl: 'https://example.com/john.jpg',
-  userName: 'John Doe',
-  conversationTitle: 'Team Chat',
-  markAsReadLabel: 'Mark as Read',
-  replyLabel: 'Quick Reply',
-  replyHint: 'Type your reply...',
-  messages: [
-    Message(
-      'Hello from John!',
-      DateTime.now().subtract(Duration(minutes: 5)),
-      Person(name: 'John Doe'),
-    ),
-    Message(
-      'How are you doing?',
-      DateTime.now(),
-      Person(name: 'John Doe'),
-    ),
-  ],
-  payload: 'chat_123',
-);
-
-await PlatformNotifier.showChatNotification(model: chatModel);
-```
-
-### Cancel Notifications
-
-```dart
-// Cancel a specific notification
-await PlatformNotifier.cancelNotification(123);
-
-// Cancel a notification with tag
-await PlatformNotifier.cancelNotification(123, tag: 'chat_notification');
-
-// Cancel all notifications
-await PlatformNotifier.cancelAllNotifications();
-```
-
-## Platform-Specific Features
-
-### Android
-
-- Custom notification channels
-- Messaging style notifications
-- Action buttons (Reply, Mark as Read)
-- Rich notifications with images
-- Priority and importance settings
-
-### iOS
-
-- Badge numbers
-- Sound and alert settings
-- Critical notifications support
-- Custom notification categories
-
-### Web
-
-- Browser notifications
-- Permission handling
-- Limited chat functionality
-
-### Desktop (Windows/macOS/Linux)
-
-- Native desktop notifications
-- System integration
-- Custom notification sounds
-
-## Error Handling
-
-The plugin includes comprehensive error handling:
-
-```dart
-try {
-  await PlatformNotifier.showNotification(model: notificationModel);
-} on StateError catch (e) {
-  print('Service not initialized: $e');
-} on ArgumentError catch (e) {
-  print('Invalid notification model: $e');
-} catch (e) {
-  print('Unexpected error: $e');
+Future<bool> wasOpenedFromNotification() async {
+  final details = await PlatformNotifier.appLaunchNotification;
+  return details?.didNotificationLaunchApp == true;
 }
 ```
 
-## Best Practices
+Android tags can be passed to `cancelNotification(id, tag: ...)`.
+Web cancellation applies to notifications tracked during the current initialized
+session. All native platforms use the delivery plugin for cancellation and
+launch details. Web returns `null` for launch details;
+Linux launch support depends on the notification server and runner setup.
 
-### 1. Initialize Early
+Android chat actions dismiss the notification natively, including when the
+main isolate is absent. Background actions are forwarded to `actionStream`
+only while the main isolate and its receiver exist. The facade does not
+persist or replay actions after app termination; applications needing that
+behavior should configure their own durable background handling.
 
-Always initialize the service in your app's startup:
+Cancel your `StreamSubscription` when its owner is disposed. Call
+`PlatformNotifier.dispose()` when the application no longer needs the
+service, rather than whenever an individual screen closes. Disposal
+releases ports and backend listeners without dismissing existing
+notifications. The singleton can be initialized again; disposal completes existing action
+subscriptions, and a new action stream is available for the next lifecycle. If initialization is still pending, await it before
+starting a new initialization after disposal.
 
-```dart
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+Operations before initialization throw `StateError`; invalid model IDs throw
+`ArgumentError`. Backend and permission errors propagate to the caller.
+Notification payloads and reply text are not written to service debug logs.
 
-  await PlatformNotifier.initialize(appName: 'My App');
+## Development
 
-  runApp(MyApp());
-}
+```sh
+flutter pub get
+dart format --output=none --set-exit-if-changed lib test example/lib example/test
+flutter analyze
+flutter test --coverage
+cd example
+flutter pub get
+flutter test
+flutter build web
+flutter build web --wasm
+flutter build apk --debug
 ```
 
-### 2. Handle Permissions
+For web development, run `flutter run -d web-server --web-port 8765` in
+`example/`, then open the localhost URL in a desktop browser.
 
-Request permissions early and handle denied cases:
-
-```dart
-Future<void> setupNotifications() async {
-  final isGranted = await PlatformNotifier.requestPermissions();
-
-  if (isGranted != true) {
-    // Show dialog explaining why notifications are needed
-    showPermissionDialog();
-  }
-}
-```
-
-### 3. Use Unique IDs
-
-Always use unique IDs for notifications to avoid conflicts:
-
-```dart
-final notificationId = DateTime.now().millisecondsSinceEpoch;
-// or
-final notificationId = Random().nextInt(1000000);
-```
-
-### 4. Validate Models
-
-The plugin automatically validates notification models, but you can also validate manually:
-
-```dart
-final model = NotificationModel(
-  id: 1,
-  title: 'Test',
-  body: 'Test body',
-);
-
-if (model.isValid) {
-  await PlatformNotifier.showNotification(model: model);
-}
-```
-
-### 5. Dispose Properly
-
-Dispose the service when your app is terminated:
-
-```dart
-@override
-void dispose() {
-  PlatformNotifier.dispose();
-  super.dispose();
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Notifications not showing on Android**
-
-   - Ensure notification channel is created
-   - Check notification permissions
-   - Verify app is not in battery optimization
-
-2. **Chat notifications not working**
-
-   - Only supported on mobile platforms (Android/iOS)
-   - Ensure proper image URL format
-   - Check network connectivity for image loading
-
-3. **Actions not working**
-
-   - Ensure proper isolate communication setup
-   - Check action IDs match constants
-   - Verify background notification handling
-
-4. **Web notifications not working**
-   - Ensure HTTPS in production
-   - Check browser notification permissions
-   - Verify user interaction before showing notifications
-
-### Debug Mode
-
-Enable debug logging:
-
-```dart
-// The plugin automatically logs debug information
-// Check console output for initialization and error messages
-```
-
-## API Reference
-
-### Classes
-
-- `PlatformNotifier` - Main entry point for notification operations
-- `PlatformNotificationService` - Core service implementation
-- `NotificationModel` - Standard notification configuration
-- `ChatNotificationModel` - Chat-style notification configuration
-- `NotificationData` - Plugin configuration data
-- `BaseNotificationAction` - Base class for notification actions
-- `NotificationClickAction` - Click action event
-- `NotificationReplyAction` - Reply action event
-- `NotificationMarkReadAction` - Mark as read action event
-
-### Methods
-
-#### PlatformNotifier
-
-- `initialize(appName, notificationData)` - Initialize the service
-- `requestPermissions()` - Request notification permissions
-- `showNotification(model, context)` - Show standard notification
-- `showChatNotification(model, context)` - Show chat notification
-- `cancelNotification(id, tag)` - Cancel specific notification
-- `cancelAllNotifications()` - Cancel all notifications
-- `appLaunchNotification` - Get app launch details from notification
-- `dispose()` - Dispose the service
-
-#### NotificationModel
-
-- `copyWith(...)` - Create a copy with modified fields
-- `isValid` - Check if the model is valid
-
-#### ChatNotificationModel
-
-- `copyWith(...)` - Create a copy with modified fields
-- `isValid` - Check if the model is valid
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Changelog
-
-### 2.0.0
-
-- Complete code refactoring and reorganization
-- Improved error handling and validation
-- Better documentation and examples
-- Enhanced type safety
-- Cleaner API design
-- Platform-specific optimizations
-
-### 1.0.5
-
-- Initial release with basic functionality
+Unit tests use mocked platform channels; builds and unit tests do not prove
+native permission prompts, delivery, or action behavior. Validate those on
+the affected OS before shipping. See [CHANGELOG.md](CHANGELOG.md),
+[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md), and [LICENSE](LICENSE).

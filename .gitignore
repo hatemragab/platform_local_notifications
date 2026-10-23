@@ -30,3 +30,13 @@ migrate_working_dir/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+
+# Local test coverage artifacts
+/coverage/
+
+# Flutter regenerates platform plugin wiring during dependency resolution.
+/example/linux/flutter/generated_plugin_registrant.*
+/example/linux/flutter/generated_plugins.cmake
+/example/macos/Flutter/GeneratedPluginRegistrant.swift
+/example/windows/flutter/generated_plugin_registrant.*
+/example/windows/flutter/generated_plugins.cmake

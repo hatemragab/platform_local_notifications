@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:material_ui/material_ui.dart';
 import 'package:platform_local_notifications/platform_local_notifications.dart';
 import 'package:v_platform/v_platform.dart';
 
@@ -12,6 +14,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  StreamSubscription<BaseNotificationAction>? _actionSubscription;
   bool _isInitialized = false;
   String _lastAction = 'No actions yet';
   String _launchDetails = 'No launch details';
@@ -20,16 +23,14 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     if (widget.initializeNotifications) {
-      _initializeNotifications();
       _setupNotificationListeners();
+      _initializeNotifications();
     }
   }
 
   @override
   void dispose() {
-    if (widget.initializeNotifications) {
-      PlatformNotifier.dispose();
-    }
+    _actionSubscription?.cancel();
     super.dispose();
   }
 
@@ -157,6 +158,7 @@ class _HomeState extends State<Home> {
   Future<void> _initializeNotifications() async {
     try {
       await PlatformNotifier.initialize(appName: 'Platform Notifications Demo');
+      if (!mounted) return;
       setState(() {
         _isInitialized = true;
       });
@@ -170,8 +172,7 @@ class _HomeState extends State<Home> {
   }
 
   void _setupNotificationListeners() {
-    PlatformNotifier.actionStream.listen((action) {
-      debugPrint("action is $action");
+    _actionSubscription = PlatformNotifier.actionStream.listen((action) {
       switch (action) {
         case NotificationClickAction _:
           final clickAction = action;
@@ -211,14 +212,16 @@ class _HomeState extends State<Home> {
   Future<void> _showSimpleNotification() async {
     try {
       final notificationModel = NotificationModel(
-        id: DateTime.now().microsecond,
+        id: _nextNotificationId(),
         title: 'Hello! 👋',
         body: 'This is a simple notification from the demo app.',
         payload: 'simple_notification_${DateTime.now().millisecondsSinceEpoch}',
       );
 
       await PlatformNotifier.showNotification(model: notificationModel);
-      _updateLastAction('Simple notification sent');
+      _updateLastAction(
+        'Simple notification sent (payload: ${notificationModel.payload})',
+      );
     } catch (error) {
       _updateLastAction('Failed to show notification: $error');
     }
@@ -227,12 +230,11 @@ class _HomeState extends State<Home> {
   Future<void> _showChatNotification() async {
     try {
       final chatModel = ChatNotificationModel(
-        id: DateTime.now().microsecond,
+        id: _nextNotificationId(),
         title: 'New Message 💬',
         body: 'Hello! How are you doing today?',
         userImageUrl: VPlatformFile.fromUrl(
-          networkUrl:
-              "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+          networkUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
         ),
         userName: 'John Doe',
         conversationTitle: 'Team Chat',
@@ -243,7 +245,9 @@ class _HomeState extends State<Home> {
       );
 
       await PlatformNotifier.showChatNotification(model: chatModel);
-      _updateLastAction('Chat notification sent');
+      _updateLastAction(
+        'Chat notification sent (payload: ${chatModel.payload})',
+      );
     } catch (error) {
       _updateLastAction('Failed to show chat notification: $error');
     }
@@ -252,7 +256,7 @@ class _HomeState extends State<Home> {
   Future<void> _showCustomNotification() async {
     try {
       final notificationModel = NotificationModel(
-        id: DateTime.now().microsecond,
+        id: _nextNotificationId(),
         title: 'Custom Notification 🎨',
         body: 'This notification has custom styling and configuration.',
         payload: 'custom_notification_${DateTime.now().millisecondsSinceEpoch}',
@@ -281,7 +285,9 @@ class _HomeState extends State<Home> {
       );
 
       await PlatformNotifier.showNotification(model: notificationModel);
-      _updateLastAction('Custom notification sent');
+      _updateLastAction(
+        'Custom notification sent (payload: ${notificationModel.payload})',
+      );
     } catch (error) {
       _updateLastAction('Failed to show custom notification: $error');
     }
@@ -296,7 +302,13 @@ class _HomeState extends State<Home> {
     }
   }
 
+  int _notificationId = 0;
+
+  int _nextNotificationId() =>
+      _notificationId = (_notificationId + 1) & 0x7fffffff;
+
   void _updateLastAction(String action) {
+    if (!mounted) return;
     setState(() {
       _lastAction = '${DateTime.now().toString().substring(11, 19)}: $action';
     });
@@ -324,12 +336,13 @@ class _HomeState extends State<Home> {
   Future<void> _checkAppLaunchDetails() async {
     try {
       final launchDetails = await PlatformNotifier.appLaunchNotification;
+      if (!mounted) return;
 
-      if (launchDetails != null) {
+      if (launchDetails?.didNotificationLaunchApp == true) {
         setState(() {
           _launchDetails =
               'App launched from notification!\n'
-              'Did notification launch app: ${launchDetails.didNotificationLaunchApp}\n'
+              'Did notification launch app: ${launchDetails!.didNotificationLaunchApp}\n'
               'Payload: ${launchDetails.notificationResponse?.payload ?? 'No payload'}\n'
               'Action ID: ${launchDetails.notificationResponse?.actionId ?? 'No action'}\n'
               'Input: ${launchDetails.notificationResponse?.input ?? 'No input'}';
@@ -346,6 +359,7 @@ class _HomeState extends State<Home> {
         );
       }
     } catch (error) {
+      if (!mounted) return;
       setState(() {
         _launchDetails = 'Error checking launch details: $error';
       });

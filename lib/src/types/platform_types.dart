@@ -1,30 +1,25 @@
 import 'package:flutter/foundation.dart';
-import 'package:v_platform/v_platform.dart';
 
 /// Enum representing different platforms supported by the plugin
-enum SupportedPlatform {
-  android,
-  ios,
-  web,
-  windows,
-  macos,
-  linux,
-  unknown,
-}
+enum SupportedPlatform { android, ios, web, windows, macos, linux, unknown }
 
 /// Extension to provide platform detection methods
 extension PlatformDetection on SupportedPlatform {
   /// Returns true if the platform is mobile (Android or iOS)
-  bool get isMobile => VPlatforms.isMobile;
+  bool get isMobile =>
+      this == SupportedPlatform.android || this == SupportedPlatform.ios;
 
   /// Returns true if the platform is desktop (Windows, macOS, or Linux)
-  bool get isDesktop => VPlatforms.isDesktop;
+  bool get isDesktop =>
+      this == SupportedPlatform.windows ||
+      this == SupportedPlatform.macos ||
+      this == SupportedPlatform.linux;
 
   /// Returns true if the platform supports chat notifications
-  bool get supportsChatNotifications => isMobile;
+  bool get supportsChatNotifications => this == SupportedPlatform.android;
 
   /// Returns true if the platform supports notification actions
-  bool get supportsNotificationActions => isMobile;
+  bool get supportsNotificationActions => this == SupportedPlatform.android;
 }
 
 /// Utility class for platform detection
@@ -35,17 +30,18 @@ class PlatformUtils {
   static SupportedPlatform get currentPlatform {
     if (kIsWeb) return SupportedPlatform.web;
 
-    if (VPlatforms.isAndroid) return SupportedPlatform.android;
-    if (VPlatforms.isIOS) return SupportedPlatform.ios;
-    if (VPlatforms.isWindows) return SupportedPlatform.windows;
-    if (VPlatforms.isMacOs) return SupportedPlatform.macos;
-    if (VPlatforms.isLinux) return SupportedPlatform.linux;
-
-    return SupportedPlatform.unknown;
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.android => SupportedPlatform.android,
+      TargetPlatform.iOS => SupportedPlatform.ios,
+      TargetPlatform.windows => SupportedPlatform.windows,
+      TargetPlatform.macOS => SupportedPlatform.macos,
+      TargetPlatform.linux => SupportedPlatform.linux,
+      TargetPlatform.fuchsia => SupportedPlatform.unknown,
+    };
   }
 
   /// Returns true if running on web
-  static bool get isWeb => VPlatforms.isWeb;
+  static bool get isWeb => kIsWeb;
 
   /// Returns true if running on mobile platforms
   static bool get isMobile => currentPlatform.isMobile;

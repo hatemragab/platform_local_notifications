@@ -1,3 +1,69 @@
+# Migration from 2.x to 3.0
+
+Update your toolchain to Dart 3.13 / Flutter 3.47 or newer. This update uses
+`flutter_local_notifications: ^22.3.2`, cache manager 3.4.5, web 1.1.2, and
+Cupertino icons 2.0.0 in the example. Android applications require API 24,
+compile SDK 36, Java 17, AGP 8.11.1 or newer, and desugaring. The upstream
+Apple platform floors are iOS 13 and macOS 10.15; the current Flutter example
+runners target iOS 15 and macOS 12.
+
+Public facade calls such as `PlatformNotifier.initialize`, `showNotification`,
+and `cancelNotification` retain their signatures. The re-exported native
+plugin now uses named parameters:
+
+```dart
+// Direct native plugin access (outside the facade):
+final plugin = FlutterLocalNotificationsPlugin();
+await plugin.initialize(settings: settings);
+await plugin.show(id: 42, title: 'Hello', body: 'World',
+  notificationDetails: details);
+await plugin.cancel(id: 42);
+```
+
+Custom Linux plugin implementations must also migrate `initialize(settings:)`,
+`show(id:, title:, body:)`, and `cancel(id:)`. The new
+`NotificationResponseType.notificationDismissed` is intentionally ignored by
+the facade's action stream: dismissal is not a click, reply, or read action.
+
+The browser registrant requires `flutter_web_plugins` from the Flutter SDK;
+this package declares it directly so consumer web builds resolve correctly.
+The facade continues to use page-scoped browser notifications with its
+existing lifecycle and payload behavior.
+
+## Behavior and lifecycle
+
+- IDs must fit a signed 32-bit integer. Replace epoch-millisecond IDs with a
+  stable signed 32-bit counter or hash. `NotificationModel.isValid` checks this.
+- `NotificationData.initializationSettingsLinux` configures the Linux backend.
+- Built-in messaging style, reply, and mark-as-read are Android-only. Other
+  platforms display chat models as standard notifications.
+- Default Android notifications now use `NotificationData.androidNotificationChannel`.
+  Use a new channel ID when changing OS-persisted importance or sound settings.
+- Web no longer depends on `quick_notify_2`. It uses page-scoped browser
+  notifications over HTTPS/localhost, supports IDs, clicks, and cancellation,
+  and compiles to WebAssembly. Mobile service-worker notifications and
+  closed-page callbacks are not implemented.
+- Windows now uses `flutter_local_notifications` for initialization, display,
+  click payloads, cancellation, and launch details. Set
+  `NotificationData.initializationSettingsWindows` for a production app identity.
+  Defaults generate a stable app ID and GUID from `appName`; changing the name
+  changes that default identity. Web cancellation remains session-scoped.
+- The example imports the standalone `material_ui` package and tests both
+  standalone Material and Cupertino consumers. The core package has no design
+  library dependency; existing notification models and facade calls are unchanged.
+- Apple example runners use Swift Package Manager and iOS UIScene lifecycle.
+  Android uses AGP 9 built-in Kotlin instead of applying the Kotlin Android plugin.
+- Repeated initialization preserves the first successful configuration.
+  Cancel your action subscriptions explicitly. Disposal releases listeners
+  and completes existing action subscriptions. Reinitialization provides a fresh action stream.
+  Await an outstanding initialization before reinitializing after disposal.
+- Ordinary Apple permission requests no longer request critical alerts.
+  Applications with that entitlement can use the exported native plugin directly.
+
+See [README.md](README.md) for current setup and platform limitations.
+
+---
+
 # Migration Guide: Version 1.x to 2.0
 
 This guide will help you migrate your existing code from Platform Local Notifications version 1.x to version 2.0.

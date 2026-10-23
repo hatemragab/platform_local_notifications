@@ -41,16 +41,19 @@ void main() {
         id: 1,
         title: 'Test Title',
         body: 'Test Body',
-        userImageUrl:
-            VPlatformFile.fromUrl(networkUrl: 'https://example.com/avatar.jpg'),
+        userImageUrl: VPlatformFile.fromUrl(
+          networkUrl: 'https://example.com/avatar.jpg',
+        ),
         userName: 'John Doe',
         payload: 'test_payload',
       );
       expect(validChatModel.id, 1);
       expect(validChatModel.title, 'Test Title');
       expect(validChatModel.body, 'Test Body');
-      expect(validChatModel.userImageUrl?.fullNetworkUrl,
-          'https://example.com/avatar.jpg');
+      expect(
+        validChatModel.userImageUrl?.fullNetworkUrl,
+        'https://example.com/avatar.jpg',
+      );
       expect(validChatModel.userName, 'John Doe');
       expect(validChatModel.payload, 'test_payload');
 
@@ -70,24 +73,33 @@ void main() {
         id: 1,
         title: 'Test Title',
         body: 'Test Body',
-        userImageUrl:
-            VPlatformFile.fromUrl(networkUrl: 'https://example.com/avatar.jpg'),
+        userImageUrl: VPlatformFile.fromUrl(
+          networkUrl: 'https://example.com/avatar.jpg',
+        ),
         userName: '',
       );
-      expect(chatModelWithEmptyName.userImageUrl?.fullNetworkUrl,
-          'https://example.com/avatar.jpg');
+      expect(
+        chatModelWithEmptyName.userImageUrl?.fullNetworkUrl,
+        'https://example.com/avatar.jpg',
+      );
       expect(chatModelWithEmptyName.userName, '');
     });
 
     test('NotificationData default values', () {
       const notificationData = NotificationData();
 
-      expect(notificationData.androidNotificationChannel.id,
-          'high_importance_channel');
-      expect(notificationData.androidNotificationChannel.name,
-          'High importance notifications');
-      expect(notificationData.initializationSettingsAndroid.defaultIcon,
-          '@mipmap/ic_launcher');
+      expect(
+        notificationData.androidNotificationChannel.id,
+        'high_importance_channel',
+      );
+      expect(
+        notificationData.androidNotificationChannel.name,
+        'High Importance Notifications',
+      );
+      expect(
+        notificationData.initializationSettingsAndroid.defaultIcon,
+        '@mipmap/ic_launcher',
+      );
     });
 
     test('NotificationAction classes', () {
@@ -117,12 +129,63 @@ void main() {
       expect(PlatformUtils.supportsNotificationActions, isA<bool>());
     });
 
+    test('capabilities describe the enum value, independently of the host', () {
+      for (final platform in SupportedPlatform.values) {
+        expect(
+          platform.isMobile,
+          [SupportedPlatform.android, SupportedPlatform.ios].contains(platform),
+        );
+        expect(
+          platform.isDesktop,
+          [
+            SupportedPlatform.windows,
+            SupportedPlatform.macos,
+            SupportedPlatform.linux,
+          ].contains(platform),
+        );
+        expect(
+          platform.supportsChatNotifications,
+          platform == SupportedPlatform.android,
+        );
+        expect(
+          platform.supportsNotificationActions,
+          platform == SupportedPlatform.android,
+        );
+      }
+    });
+
+    test('model validation preserves signed native IDs and empty content', () {
+      for (final id in [-0x80000000, -1, 0, 0x7fffffff]) {
+        expect(NotificationModel(id: id, title: '', body: '').isValid, isTrue);
+      }
+      for (final id in [-0x80000001, 0x80000000]) {
+        expect(NotificationModel(id: id, title: '', body: '').isValid, isFalse);
+      }
+    });
+
+    test('configuration copy preserves Linux and custom channel settings', () {
+      const linux = LinuxInitializationSettings(defaultActionName: 'View');
+      final data = const NotificationData().copyWith(
+        initializationSettingsLinux: linux,
+      );
+      expect(data.initializationSettingsLinux, same(linux));
+      expect(data.copyWith().initializationSettingsLinux, same(linux));
+      expect(
+        data.androidNotificationChannel.description,
+        NotificationConstants.defaultChannelDescription,
+      );
+    });
+
     test('NotificationConstants values', () {
-      expect(NotificationConstants.actionReceiverPortName,
-          'v_action_receiver_port');
+      expect(
+        NotificationConstants.actionReceiverPortName,
+        'v_action_receiver_port',
+      );
       expect(NotificationConstants.defaultChannelId, 'high_importance_channel');
-      expect(NotificationConstants.defaultChannelName,
-          'High Importance Notifications');
+      expect(
+        NotificationConstants.defaultChannelName,
+        'High Importance Notifications',
+      );
       expect(NotificationConstants.markAsReadActionId, '1');
       expect(NotificationConstants.replyActionId, '2');
       expect(NotificationConstants.defaultMarkAsReadLabel, 'Mark as read');

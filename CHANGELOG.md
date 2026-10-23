@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-10-24
+
+### Fixed
+
+- Remove the legacy desktop plugin and migrate Windows to the native notification backend, with configurable stable app identity and launch/cancel support.
+- Migrate Apple example runners to Swift Package Manager and UIScene, and correct the always-running Flutter build phase metadata.
+- Update Android to Gradle 9.3.1 / AGP 9.1.0 and built-in Kotlin, removing obsolete Kotlin plugin application warnings.
+- Support Flutter's standalone design packages: migrate the example to `material_ui` 1.8.0 and add `cupertino_ui` 1.1.4 consumer coverage.
+- Display the sent payload in the example so OS notification clicks can be matched to the original notification.
+
+- Initialize the notification delivery backend on macOS and Linux; add Linux initialization settings.
+- Use the native Windows backend for show, click payloads, replacement, and cancellation.
+- Share concurrent initialization, retain the first configuration, propagate setup failures, and support disposal followed by reinitialization.
+- Apply the configured Android channel to default notifications; use the channel name and description correctly.
+- Dismiss Android chat actions natively when the main isolate is absent, catch asynchronous cancellation errors, and remove sensitive action logs.
+- Derive platform capabilities from the enum value; built-in chat actions are Android-only with a standard fallback elsewhere.
+- Validate signed 32-bit IDs before delivery while retaining empty-content and negative-ID compatibility.
+- Bound avatar download waits and fall back safely for missing files.
+- Cancel the example's action subscription, guard async widget updates, and distinguish normal launches from notification launches.
+
+### Changed
+
+- Update `flutter_local_notifications` to `^22.3.2`, cache manager to `^3.4.5`, browser bindings to `^1.1.2`, and example Cupertino icons to `^2.0.0`.
+- Require Dart 3.13 and Flutter 3.47; migrate native plugin calls and Linux test doubles to named parameters.
+- Ignore notification dismissal callbacks instead of treating them as interactive actions.
+- Declare the Flutter web plugins SDK dependency required by the generated browser registrant.
+- Replace prerelease `quick_notify_2` with maintained `package:web` browser bindings, enabling JavaScript and WebAssembly builds, web click payloads, same-ID replacement, and session-scoped cancellation.
+- Request ordinary Apple notification permissions without requesting critical-alert entitlement.
+- Add regression tests, CI validation, current setup documentation, and native example configuration fixes.
+- Refresh example Android AGP/Kotlin/Java/NDK settings and remove obsolete Jetifier processing; migrate the Gradle wrapper to the supported 9.x toolchain.
+- Adopt current Flutter-generated Apple runner integration and deployment targets in the example.
+- Stop tracking generated example plugin registrants; Flutter regenerates them during dependency resolution.
+
 ## [2.2.0] - 2026-08-17
 
 ### Changed

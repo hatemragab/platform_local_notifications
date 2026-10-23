@@ -1,6 +1,8 @@
 import 'package:v_platform/v_platform.dart';
 
-import '../../platform_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import '../constants/notification_constants.dart';
 
 /// Configuration data for the notification plugin
 class NotificationConfiguration {
@@ -17,11 +19,13 @@ class NotificationConfiguration {
   const NotificationConfiguration({
     this.androidChannel = const AndroidNotificationChannel(
       NotificationConstants.defaultChannelId,
-      NotificationConstants.defaultChannelDescription,
+      NotificationConstants.defaultChannelName,
+      description: NotificationConstants.defaultChannelDescription,
       importance: Importance.max,
     ),
-    this.androidSettings =
-        const AndroidInitializationSettings('@mipmap/ic_launcher'),
+    this.androidSettings = const AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    ),
     this.darwinSettings = const DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -81,6 +85,10 @@ class NotificationModel {
     this.macOsDetails,
     this.linuxDetails,
   });
+
+  /// Whether the identifier fits native signed 32-bit notification IDs.
+  /// Empty titles and bodies remain supported for platform-specific layouts.
+  bool get isValid => id >= -0x80000000 && id <= 0x7fffffff;
 
   /// Creates a copy of this model with the given fields replaced
   NotificationModel copyWith({
