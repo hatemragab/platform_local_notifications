@@ -1,8 +1,8 @@
-# Migration from 2.x to 3.0
+# Migration to 4.0
 
 Update your toolchain to Dart 3.13 / Flutter 3.47 or newer. This update uses
-`flutter_local_notifications: ^22.3.2`, cache manager 3.4.5, web 1.1.2, and
-Cupertino icons 2.0.0 in the example. Android applications require API 24,
+`flutter_local_notifications: ^22.3.3`, cache manager 3.5.0, web 1.1.2, and
+Cupertino icons 2.0.0 in the example. Version 4 requires `v_platform: ^3.0.0`. Android applications require API 24,
 compile SDK 36, Java 17, AGP 8.11.1 or newer, and desugaring. The upstream
 Apple platform floors are iOS 13 and macOS 10.15; the current Flutter example
 runners target iOS 15 and macOS 12.

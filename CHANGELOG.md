@@ -1,3 +1,9 @@
+## 4.0.0 - 2026-11-04
+
+- Require Flutter >=3.47.0 and Dart >=3.13.0 <4.0.0 for this SDK update.
+- Refresh package and example dependency constraints to current stable releases as of 2026-11-04, subject to documented upstream compatibility constraints.
+- Validate with Flutter 3.47.8 / Dart 3.13.7 using fix, format, static analysis, and package/example tests.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

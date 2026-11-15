@@ -9,13 +9,13 @@ notifications.
 
 ```yaml
 dependencies:
-  platform_local_notifications: ^3.0.0
+  platform_local_notifications: ^4.0.0
   # Only needed when constructing chat avatars:
-  v_platform: ^2.2.0
+  v_platform: ^3.0.0
 ```
 
-Version 3.0 requires Dart 3.13 and Flutter 3.47 or newer.
-It uses `flutter_local_notifications: ^22.3.2`, `flutter_cache_manager: ^3.4.5`,
+Version 4.0 requires Dart 3.13 and Flutter 3.47 or newer.
+It uses `flutter_local_notifications: ^22.3.3`, `flutter_cache_manager: ^3.5.0`,
 and `web: ^1.1.2`. All direct package and example dependencies use their latest
 stable versions. Flutter itself pins `material_color_utilities` and `test_api`;
 these are kept at the SDK-compatible versions without dependency overrides.
