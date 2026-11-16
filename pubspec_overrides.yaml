@@ -1,0 +1,4 @@
+# Local Flutter 3.50 migration cohort; published constraints stay in pubspec.yaml.
+dependency_overrides:
+  v_platform:
+    path: ../../v-chat-sdk/v_platform

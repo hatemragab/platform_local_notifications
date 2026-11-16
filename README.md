@@ -30,8 +30,8 @@ The package itself uses Flutter foundation and native notification types without
 requiring Material or Cupertino widgets. Consumers can use either of Flutter's
 standalone design libraries. The example uses `material_ui: ^1.8.0`, and its
 regression suite also exercises the notification facade under
-`cupertino_ui: ^1.1.4`. No legacy `package:flutter/material.dart` or
-`package:flutter/cupertino.dart` imports remain in maintained package/example code.
+`cupertino_ui: ^1.1.4`. No legacy `package:material_ui/material_ui.dart` or
+`package:cupertino_ui/cupertino_ui.dart` imports remain in maintained package/example code.
 A compatibility bridge is only needed if your own widget subtree contains
 unmigrated third-party widgets; the notification service does not need one.
 
